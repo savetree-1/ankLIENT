@@ -1,0 +1,4 @@
+playwright
+rich
+prompt_toolkit
+tomli

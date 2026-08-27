@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+
+# Database (Do not commit user's personal chat history!)
+data/*.db
+data/history.db
+
+# Downloads
+Downloads/
+ChatGPT_Generated/
+data/downloads/
+
+# OS Files
+.DS_Store
+Thumbs.db
