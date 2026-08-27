@@ -54,10 +54,15 @@ def cmd_prompts(context, *args):
 
 def cmd_use(context, *args):
     if not args:
-        console.print("[error]Missing prompt ID. Usage: /use <id>[/error]")
+        console.print("[error]Missing prompt ID. Usage: /use <id> [optional text][/error]")
         return
         
-    prompt_id = int(args[0])
+    try:
+        prompt_id = int(args[0])
+    except ValueError:
+        console.print("[error]Invalid prompt ID. Must be a number.[/error]")
+        return
+        
     prompt_mgr = context.get('prompt_mgr')
     prompts = prompt_mgr.get_all()
     
@@ -75,14 +80,65 @@ def cmd_use(context, *args):
     vars_needed = extract_variables(template_str)
     values = {}
     
+    extra_text = " ".join(args[1:])
+    
     if vars_needed:
-        console.print("[dim]Fill in the blanks to complete this template:[/dim]")
-        for var in vars_needed:
-            val = console.input(f"[meta.value]{var}[/meta.value]: ")
-            values[var] = val
+        # If the user typed the text on the same line AND there is exactly one variable, auto-fill it!
+        if extra_text and len(vars_needed) == 1:
+            values[vars_needed[0]] = extra_text
+        else:
+            console.print("[dim]Fill in the blanks to complete this template:[/dim]")
+            for var in vars_needed:
+                val = console.input(f"[meta.value]{var}[/meta.value]: ")
+                values[var] = val
+    elif extra_text:
+        # If there are no variables, just append the text to the end of the template
+        template_str += "\n\n" + extra_text
             
     final_prompt = render_template(template_str, values)
     context['next_prompt'] = final_prompt
+
+def cmd_newprompt(context, *args):
+    console.print("\n[bold cyan]Create a New Prompt Template[/bold cyan]")
+    name = console.input("[bold]Name[/bold] (e.g. Humanize Text): ")
+    if not name: return
+    
+    desc = console.input("[bold]Description[/bold]: ")
+    
+    console.print("\n[dim]Enter your template below. Use {{variable}} to create fill-in-the-blanks.[/dim]")
+    console.print("[dim]Type [bold white]SAVE[/bold white] on an empty line when you are finished.[/dim]\n")
+    
+    lines = []
+    while True:
+        line = input()
+        if line.strip() == "SAVE":
+            break
+        lines.append(line)
+        
+    template = "\n".join(lines)
+    
+    if not template.strip():
+        console.print("[error]Template cannot be empty. Cancelled.[/error]")
+        return
+        
+    from app.prompts.models import PromptModel
+    prompt_mgr = context.get('prompt_mgr')
+    
+    new_prompt = PromptModel(
+        id=None,
+        name=name,
+        description=desc,
+        category="Custom",
+        template=template,
+        tags="",
+        favorite=False,
+        usage_count=0,
+        last_used=None
+    )
+    
+    new_id = prompt_mgr.add_prompt(new_prompt)
+    console.print(f"\n[status.done]✓ Successfully saved as Prompt #{new_id}![/status.done]")
+    console.print(f"[dim]You can now use it by typing: /use {new_id}[/dim]\n")
 
 def cmd_copy(context, *args):
     last_response = context.get('last_response')
@@ -172,6 +228,7 @@ def register_builtins(router):
     router.register("history", cmd_history)
     router.register("prompts", cmd_prompts)
     router.register("use", cmd_use)
+    router.register("newprompt", cmd_newprompt)
     router.register("copy", cmd_copy)
     router.register("paste", cmd_paste)
     router.register("save", cmd_save)
