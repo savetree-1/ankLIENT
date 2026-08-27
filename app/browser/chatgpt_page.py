@@ -46,8 +46,14 @@ class ChatGPTPage:
                 return True
         return False
 
-    def assistant_texts(self) -> List[str]:
-        return self.page.locator(selectors.ASSISTANT_MESSAGES).all_inner_texts()
+    def assistant_message_count(self) -> int:
+        return self.page.locator(selectors.ASSISTANT_MESSAGES).count()
+
+    def last_assistant_text(self) -> str:
+        locator = self.page.locator(selectors.ASSISTANT_MESSAGES)
+        if locator.count() > 0:
+            return locator.last.inner_text()
+        return ""
 
     def get_editor(self):
             

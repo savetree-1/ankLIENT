@@ -11,8 +11,9 @@ class ChatGPTClient:
     def attach_file(self, filepath: str):
         self.page.attach_file(filepath)
 
-    def send_message(self, prompt: str, on_status: Optional[Callable[[str], None]] = None) -> ChatResponse:
-        before = self.page.assistant_texts()
+    def send_message(self, prompt: str, on_status: Optional[Callable[[str], None]] = None, on_stream: Optional[Callable[[str], None]] = None) -> ChatResponse:
+        before_count = self.page.assistant_message_count()
+        before_last_text = self.page.last_assistant_text().strip() if before_count > 0 else ""
         
         # Track existing generated images
         existing_imgs = self.page.page.locator('img[alt^="Generated image"]').all()
@@ -37,17 +38,16 @@ class ChatGPTClient:
         image_generating = False
 
         while time.time() < deadline:
-            texts = self.page.assistant_texts()
+            current_count = self.page.assistant_message_count()
             
-            if len(texts) > len(before):
-                current = texts[-1].strip()
+            if current_count > before_count:
+                current = self.page.last_assistant_text().strip()
                 if current:
                     first_text = current
                     break
-            elif texts:
-                old = before[-1].strip() if before else ""
-                current = texts[-1].strip()
-                if current and current != old:
+            elif current_count > 0:
+                current = self.page.last_assistant_text().strip()
+                if current and current != before_last_text:
                     first_text = current
                     break
                     
@@ -103,23 +103,28 @@ class ChatGPTClient:
             # Wait for stability
             last_text = first_text
             stable_for = 0.0
+            
+            if on_stream:
+                on_stream(last_text)
     
             while time.time() < deadline:
-                texts = self.page.assistant_texts()
+                current_count = self.page.assistant_message_count()
                 new_imgs = self.page.page.locator('img[alt^="Generated image"]').all()
                 
-                if len(texts) > len(before):
-                    current = texts[-1].strip()
+                if current_count > before_count:
+                    current = self.page.last_assistant_text().strip()
                 elif len(new_imgs) > len(existing_imgs):
                     current = "[Image Generated]"
                 else:
-                    current = texts[-1].strip() if texts else ""
+                    current = self.page.last_assistant_text().strip() if current_count > 0 else ""
                 
                 if current == last_text:
                     stable_for += 0.1
                 else:
                     last_text = current
                     stable_for = 0.0
+                    if on_stream:
+                        on_stream(current)
     
                 if stable_for >= 0.8 and not self.page._is_generating():
                     answer = current

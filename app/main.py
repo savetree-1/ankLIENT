@@ -89,7 +89,17 @@ def run_interactive(client, history_repo, prompt_mgr):
 
         try:
             print_request(prompt)
-            response = client.send_message(prompt, on_status=print_status)
+            
+            from app.ui.terminal import TextStreamingLivePanel
+            stream_panel = TextStreamingLivePanel()
+            
+            def handle_stream(text: str):
+                if not stream_panel.live:
+                    stream_panel.start()
+                stream_panel.update(text)
+                
+            response = client.send_message(prompt, on_status=print_status, on_stream=handle_stream)
+            stream_panel.stop()
             print_response(response)
             
             cmd_context['last_response'] = response.content
@@ -100,6 +110,7 @@ def run_interactive(client, history_repo, prompt_mgr):
                 word_count=response.word_count, char_count=response.char_count, status="success"
             ))
         except Exception as e:
+            if 'stream_panel' in locals(): stream_panel.stop()
             print_error(e)
 
 def main():
@@ -162,7 +173,16 @@ def main():
                 print_header()
                 print_request(query_str)
                 
-                response = client.send_message(query_str, on_status=print_status)
+                from app.ui.terminal import TextStreamingLivePanel
+                stream_panel = TextStreamingLivePanel()
+                
+                def handle_stream(text: str):
+                    if not stream_panel.live:
+                        stream_panel.start()
+                    stream_panel.update(text)
+                    
+                response = client.send_message(query_str, on_status=print_status, on_stream=handle_stream)
+                stream_panel.stop()
                 print_response(response)
                 
                 history_repo.save(HistoryItem(

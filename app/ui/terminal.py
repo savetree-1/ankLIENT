@@ -95,3 +95,26 @@ class ImageGenerationLivePanel:
             self.live.stop()
             self.live = None
 
+class TextStreamingLivePanel:
+    def __init__(self):
+        self.live = None
+        self.current_text = "..."
+        
+    def start(self):
+        self.live = Live(self._build_panel(), refresh_per_second=15, console=console, transient=True)
+        self.live.start()
+        
+    def update(self, text: str):
+        if text and text != self.current_text:
+            self.current_text = text
+            if self.live:
+                self.live.update(self._build_panel())
+                
+    def stop(self):
+        if self.live:
+            self.live.stop()
+            self.live = None
+            
+    def _build_panel(self):
+        return create_response_panel(self.current_text)
+
