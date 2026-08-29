@@ -201,6 +201,7 @@ class DetectorBudgets:
             hard_timeout_seconds=config.detector_hard_timeout_seconds,
         )
 
+
 # Phrases ChatGPT uses in its rate-limit pop-up. Matched case-insensitively
 # against scanned DOM text. Kept narrow to avoid false positives on normal
 # chat content (e.g. a user asking about "rate limits" in a message).
@@ -243,7 +244,11 @@ class CompletionDetector:
         self.had_non_text_content: bool = False
 
     async def _reconcile_before_stall(
-        self, d, conv_id: str, turn_anchor, had_non_text_content: bool,
+        self,
+        d,
+        conv_id: str,
+        turn_anchor,
+        had_non_text_content: bool,
     ) -> bool:
         """P1: final reconciliation before raising a phase-2 stall.
 
@@ -270,7 +275,8 @@ class CompletionDetector:
             return False
         try:
             end_result = await d._fetch_end_turn_for_turn(
-                conv_id, turn_anchor,
+                conv_id,
+                turn_anchor,
                 had_non_text_content=had_non_text_content,
             )
             status = collapse_to_end_turn_status(end_result)
@@ -390,7 +396,9 @@ class CompletionDetector:
             if current_count > initial_count:
                 break
             if time.monotonic() - last_progress > PHASE_STALL_SECONDS:
-                raise GenerationStuckError("phase_1_appear", time.monotonic() - last_progress)
+                raise GenerationStuckError(
+                    "phase_1_appear", time.monotonic() - last_progress
+                )
             await asyncio.sleep(0.5)
         else:
             raise GenerationStuckError("phase_1_appear", timeout)
@@ -650,7 +658,9 @@ class CompletionDetector:
                 if now - last_conv_id_probe >= 1.0:
                     last_conv_id_probe = now
                     try:
-                        conv_id_for_check = await d._get_live_conversation_id_best_effort()
+                        conv_id_for_check = (
+                            await d._get_live_conversation_id_best_effort()
+                        )
                         if conv_id_for_check:
                             logger.info(
                                 "Resolved conversation id mid-loop: %s",
@@ -669,7 +679,9 @@ class CompletionDetector:
             backend_fetch_failed = False
             if (
                 conv_id_for_check
-                and (last_dom_text or saw_thinking or is_thinking or had_non_text_content)
+                and (
+                    last_dom_text or saw_thinking or is_thinking or had_non_text_content
+                )
                 and time.monotonic() - last_backend_check > 3.0
             ):
                 last_backend_check = time.monotonic()
@@ -682,7 +694,8 @@ class CompletionDetector:
                     # fallback and risk completing off a prior turn's action
                     # row — the line-493 gate invariant).
                     end_result = await d._fetch_end_turn_for_turn(
-                        conv_id_for_check, turn_anchor,
+                        conv_id_for_check,
+                        turn_anchor,
                         had_non_text_content=had_non_text_content,
                     )
                     status = collapse_to_end_turn_status(end_result)
@@ -705,7 +718,8 @@ class CompletionDetector:
                         backend_fetch_failed = True
                         logger.debug(
                             "end_turn fetch failed (status=%s): %s",
-                            end_result.status, end_result.diagnostic,
+                            end_result.status,
+                            end_result.diagnostic,
                         )
                     # else: not_ready — no-op (do NOT set backend_fetch_failed).
                 except AuthExpiredError:
@@ -782,7 +796,9 @@ class CompletionDetector:
                     # backend one more time.
                     turn_id = getattr(turn_anchor, "captured_id", None)
                     reconciled = await self._reconcile_before_stall(
-                        d, conv_id_for_check, turn_anchor,
+                        d,
+                        conv_id_for_check,
+                        turn_anchor,
                         had_non_text_content,
                     )
                     if reconciled:
@@ -790,8 +806,11 @@ class CompletionDetector:
                             "Phase-2 %s reconciled after stall — generation "
                             "had completed (elapsed=%.0fs, kind=%s, "
                             "model_class=%s, active=%s)",
-                            stall_kind, elapsed_total, stall_kind,
-                            model_class, generation_active_signal,
+                            stall_kind,
+                            elapsed_total,
+                            stall_kind,
+                            model_class,
+                            generation_active_signal,
                         )
                         return  # generation completed — return normally
                     # Reconciliation found no completion — raise structured error.
@@ -807,7 +826,9 @@ class CompletionDetector:
             else:
                 # Legacy path (no budgets provided): single PHASE_STALL_SECONDS.
                 if time.monotonic() - last_change_time > PHASE_STALL_SECONDS:
-                    raise GenerationStuckError("phase_2_stream", time.monotonic() - last_change_time)
+                    raise GenerationStuckError(
+                        "phase_2_stream", time.monotonic() - last_change_time
+                    )
 
             await asyncio.sleep(0.5)
 

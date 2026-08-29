@@ -28,11 +28,13 @@ class ChatGPTPage(BrowserDriver):
         buttons = self.page.locator("button:visible")
         for i in range(buttons.count()):
             button = buttons.nth(i)
-            label = " ".join([
-                button.get_attribute("aria-label") or "",
-                button.get_attribute("data-testid") or "",
-                button.inner_text() or ""
-            ]).lower()
+            label = " ".join(
+                [
+                    button.get_attribute("aria-label") or "",
+                    button.get_attribute("data-testid") or "",
+                    button.inner_text() or "",
+                ]
+            ).lower()
             if "send" in label:
                 return button
         return None
@@ -41,11 +43,13 @@ class ChatGPTPage(BrowserDriver):
         buttons = self.page.locator("button:visible")
         for i in range(buttons.count()):
             button = buttons.nth(i)
-            label = " ".join([
-                button.get_attribute("aria-label") or "",
-                button.get_attribute("data-testid") or "",
-                button.inner_text() or ""
-            ]).lower()
+            label = " ".join(
+                [
+                    button.get_attribute("aria-label") or "",
+                    button.get_attribute("data-testid") or "",
+                    button.inner_text() or "",
+                ]
+            ).lower()
             if "stop" in label:
                 return True
         return False
@@ -60,7 +64,7 @@ class ChatGPTPage(BrowserDriver):
         return ""
 
     def get_editor(self):
-            
+
         editor = self.page.locator(selectors.EDITOR).first
         try:
             editor.wait_for(state="visible", timeout=5000)
@@ -73,7 +77,7 @@ class ChatGPTPage(BrowserDriver):
         editor.click()
         editor.fill(prompt)
         time.sleep(0.15)
-        
+
         send_btn = self._find_send_button()
         if send_btn is None:
             raise RuntimeError("Send button not found.")
@@ -86,13 +90,12 @@ class ChatGPTPage(BrowserDriver):
 
     def attach_file(self, filepath: str) -> None:
         import os
+
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"File not found: {filepath}")
-        
+
         file_input = self.page.locator('input[type="file"]').first
         if file_input.count() == 0:
             raise RuntimeError("Attachment input not found on the page.")
-            
+
         file_input.set_input_files(filepath)
-
-

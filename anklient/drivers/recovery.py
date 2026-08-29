@@ -1,13 +1,14 @@
-
 from anklient.drivers.connection import BrowserConnection
 from anklient.drivers.playwright_driver import ChatGPTPage
 
 
-def recover_connection(cdp_url: str = "http://127.0.0.1:9222") -> tuple[BrowserConnection, ChatGPTPage]:
+def recover_connection(
+    cdp_url: str = "http://127.0.0.1:9222",
+) -> tuple[BrowserConnection, ChatGPTPage]:
     """Attempts to recover the browser connection and page state."""
     conn = BrowserConnection(cdp_url)
     conn.connect()
-    
+
     try:
         page = ChatGPTPage(conn.browser)
         # Try to find editor to ensure page is ready

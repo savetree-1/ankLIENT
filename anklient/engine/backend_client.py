@@ -139,7 +139,9 @@ class BackendClient:
             if attempt < 3:
                 await asyncio.sleep(0.5)
         raise (
-            last_error if last_error else RuntimeError("No access token — not logged into ChatGPT")
+            last_error
+            if last_error
+            else RuntimeError("No access token — not logged into ChatGPT")
         )
 
     async def ensure_token(self) -> str:
@@ -157,7 +159,9 @@ class BackendClient:
         ``ensure_token``.
         """
         d = self._driver
-        stale = not d._access_token or time.time() - d._token_fetched_at > TOKEN_TTL_SECONDS
+        stale = (
+            not d._access_token or time.time() - d._token_fetched_at > TOKEN_TTL_SECONDS
+        )
         if stale:
             await d._refresh_token()
         return d._access_token
@@ -213,7 +217,9 @@ class BackendClient:
                 self._driver._breakers.trip(
                     BreakerKind.AUTH_EXPIRED, "login page returned instead of data"
                 )
-            raise AuthExpiredError("Session expired — read returned login page instead of data")
+            raise AuthExpiredError(
+                "Session expired — read returned login page instead of data"
+            )
 
     # ── Conversation fetch ────────────────────────────────────
 
@@ -268,9 +274,7 @@ class BackendClient:
     # _Transient404 (transient race, swallowed by the wrappers below),
     # other non-OK → RuntimeError, transport failure → fetch_failed status.
 
-    async def _fetch_recent_conversation_projection(
-        self, conversation_id: str
-    ) -> dict:
+    async def _fetch_recent_conversation_projection(self, conversation_id: str) -> dict:
         """Fetch and project the recent conversation mapping.
 
         Executes ``CONVERSATION_PROJECTION_JS`` via the driver's
@@ -307,7 +311,9 @@ class BackendClient:
                 status = None
             if status == 401:
                 if d._breakers:
-                    d._breakers.trip(BreakerKind.AUTH_EXPIRED, "HTTP 401 from backend-api")
+                    d._breakers.trip(
+                        BreakerKind.AUTH_EXPIRED, "HTTP 401 from backend-api"
+                    )
                 raise AuthExpiredError()
             if status in (404, 400):
                 raise _Transient404(conversation_id)
@@ -331,9 +337,7 @@ class BackendClient:
         except (json.JSONDecodeError, TypeError) as e:
             raise CDPJSError(f"projection returned unparseable JSON: {e}") from e
 
-    async def _fetch_text_for_turn(
-        self, conversation_id: str, anchor
-    ):
+    async def _fetch_text_for_turn(self, conversation_id: str, anchor):
         """Anchored final-text fetch for one turn.
 
         Fetches the projected mapping and runs ``select_text_for_turn`` to
@@ -639,7 +643,9 @@ class BackendClient:
             if "error" in result:
                 logger.error("Create project failed: %s", result["error"])
                 return result
-            logger.info("Created project: %s (%s)", result.get("name"), result.get("id"))
+            logger.info(
+                "Created project: %s (%s)", result.get("name"), result.get("id")
+            )
             return result
         except json.JSONDecodeError:
             return {"error": "Invalid response"}
@@ -719,7 +725,9 @@ class BackendClient:
 
     # ── Archive Conversation ────────────────────────────────
 
-    async def archive_conversation(self, conversation_id: str, archive: bool = True) -> bool:
+    async def archive_conversation(
+        self, conversation_id: str, archive: bool = True
+    ) -> bool:
         """Archive or unarchive a conversation. Returns True on success."""
         from .cdp_driver import CDPJSError
 
@@ -737,14 +745,20 @@ class BackendClient:
                 "    return r.ok ? 'true' : 'false';"
                 "  } catch(e) { return 'error:' + e.message; }"
                 "})()",
-                {"conv_id": conversation_id, "token": d._access_token, "archive": archive},
+                {
+                    "conv_id": conversation_id,
+                    "token": d._access_token,
+                    "archive": archive,
+                },
             )
         except CDPJSError as e:
             logger.warning("archive_conversation JS failed: %s", e)
             result = "false"
         if result == "true":
             logger.info(
-                "%s conversation: %s", "Archived" if archive else "Unarchived", conversation_id
+                "%s conversation: %s",
+                "Archived" if archive else "Unarchived",
+                conversation_id,
             )
             return True
         logger.warning("Failed to archive conversation: %s", result)
@@ -823,7 +837,8 @@ class BackendClient:
         try:
             memories = await d.get_memories()
             memory_created = any(
-                content[:30].lower() in (m.get("content", "")[:50].lower()) for m in memories
+                content[:30].lower() in (m.get("content", "")[:50].lower())
+                for m in memories
             )
         except Exception:
             pass  # best-effort verification

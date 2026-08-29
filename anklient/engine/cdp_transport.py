@@ -153,11 +153,15 @@ class CDPTransport:
         fut: asyncio.Future = asyncio.get_event_loop().create_future()
         d._pending[mid] = fut
         try:
-            await d._ws.send(json.dumps({"id": mid, "method": method, "params": params or {}}))
+            await d._ws.send(
+                json.dumps({"id": mid, "method": method, "params": params or {}})
+            )
         except Exception as e:
             d._pending.pop(mid, None)
             if _retry and self._should_reconnect(e):
-                logger.warning("CDP send failed (%s); reconnecting and retrying once", e)
+                logger.warning(
+                    "CDP send failed (%s); reconnecting and retrying once", e
+                )
                 await d.reconnect()
                 return await self._cdp(method, params, timeout, _retry=False)
             raise
@@ -197,7 +201,9 @@ class CDPTransport:
         )
         return resp.get("result", {}).get("result", {}).get("value", "")
 
-    async def _js_with_data(self, expr_template: str, data: dict, timeout: float = 15) -> str:
+    async def _js_with_data(
+        self, expr_template: str, data: dict, timeout: float = 15
+    ) -> str:
         """Evaluate JS with safely injected data variables.
 
         Injects *data* as the ``__D`` argument of an async IIFE so the
@@ -262,7 +268,9 @@ class CDPTransport:
         # JS exception
         if result.get("exceptionDetails"):
             exd = result["exceptionDetails"]
-            exc_text = exd.get("exception", {}).get("description", "") or exd.get("text", "")
+            exc_text = exd.get("exception", {}).get("description", "") or exd.get(
+                "text", ""
+            )
             raise CDPJSError(
                 f"JS exception: {exc_text[:500]}",
                 details=exd,

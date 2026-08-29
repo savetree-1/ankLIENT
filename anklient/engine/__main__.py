@@ -53,7 +53,9 @@ def inject_cookies(args) -> None:
     import urllib.request
 
     try:
-        req = urllib.request.Request(f"http://127.0.0.1:{config.chrome.cdp_port}/json/list")
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{config.chrome.cdp_port}/json/list"
+        )
         with urllib.request.urlopen(req, timeout=3) as resp:
             targets = json.loads(resp.read())
     except Exception:
@@ -74,7 +76,11 @@ def inject_cookies(args) -> None:
         # Navigate to chatgpt.com first
         await ws.send(
             json.dumps(
-                {"id": 1, "method": "Page.navigate", "params": {"url": "https://chatgpt.com/"}}
+                {
+                    "id": 1,
+                    "method": "Page.navigate",
+                    "params": {"url": "https://chatgpt.com/"},
+                }
             )
         )
         import asyncio as aio
@@ -94,10 +100,14 @@ def inject_cookies(args) -> None:
             if cookie.get("sameSite"):
                 cdp_cookie["sameSite"] = cookie["sameSite"]
             if cookie.get("expirationDate") or cookie.get("expiry"):
-                cdp_cookie["expires"] = cookie.get("expirationDate") or cookie.get("expiry")
+                cdp_cookie["expires"] = cookie.get("expirationDate") or cookie.get(
+                    "expiry"
+                )
 
             await ws.send(
-                json.dumps({"id": i + 10, "method": "Network.setCookie", "params": cdp_cookie})
+                json.dumps(
+                    {"id": i + 10, "method": "Network.setCookie", "params": cdp_cookie}
+                )
             )
             await aio.sleep(0.01)
 
@@ -128,7 +138,9 @@ def inject_cookies(args) -> None:
                     print(f"Auth verified: {result}")
                 else:
                     print(f"Auth failed: {result}")
-                    print("Cookies may be expired. Export fresh cookies from your browser.")
+                    print(
+                        "Cookies may be expired. Export fresh cookies from your browser."
+                    )
                 break
         await ws.close()
 
@@ -161,7 +173,9 @@ def main() -> None:
             "function", nargs="?", help="Function to diagnose (omit to auto-discover)"
         )
         doctor_parser.add_argument(
-            "--verify", metavar="FUNCTION", help="Re-run a function live to verify a fix"
+            "--verify",
+            metavar="FUNCTION",
+            help="Re-run a function live to verify a fix",
         )
         ensure_parser = subparsers.add_parser(
             "ensure",
@@ -169,7 +183,10 @@ def main() -> None:
             "Exit codes: 0 ready, 1 reconcile failure, 2 auth/login needed.",
         )
         ensure_parser.add_argument(
-            "--rest-port", type=int, default=8080, help="REST API port to reconcile (default: 8080)"
+            "--rest-port",
+            type=int,
+            default=8080,
+            help="REST API port to reconcile (default: 8080)",
         )
         ensure_parser.add_argument(
             "--mcp-sse-port",
@@ -221,7 +238,9 @@ def main() -> None:
 
 def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--config", "-c", help="Config file path (JSON)")
-    parser.add_argument("--port", "-p", type=int, help="API server port (default: 8080)")
+    parser.add_argument(
+        "--port", "-p", type=int, help="API server port (default: 8080)"
+    )
     parser.add_argument("--host", help="API server host (default: 127.0.0.1)")
     parser.add_argument("--cdp-port", type=int, help="Chrome CDP port (default: 9222)")
     parser.add_argument("--chrome-path", help="Path to Chrome binary")

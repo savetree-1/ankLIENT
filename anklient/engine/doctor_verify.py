@@ -46,8 +46,10 @@ async def verify_function(function: str) -> int:
     try:
         runner = _VERIFY_SAFE.get(function)
         if runner is None:
-            print(f"'{function}' has no safe verify runner. For mutating tools, "
-                  "use the E2E suite (tests/test_e2e_*.py) to verify a fix.")
+            print(
+                f"'{function}' has no safe verify runner. For mutating tools, "
+                "use the E2E suite (tests/test_e2e_*.py) to verify a fix."
+            )
             return 2
         result = await runner(driver)
         healthy, mismatch = classify_result(function, result)

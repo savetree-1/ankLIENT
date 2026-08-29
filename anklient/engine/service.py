@@ -183,7 +183,9 @@ class Service:
         host = (cfg.server.host or "127.0.0.1").lower()
         loopback = host in ("127.0.0.1", "::1", "localhost")
         has_keys = bool(cfg.server.api_keys)
-        allow_unauth_remote = os.environ.get("W2A_ALLOW_UNAUTH_REMOTE", "").strip() == "1"
+        allow_unauth_remote = (
+            os.environ.get("W2A_ALLOW_UNAUTH_REMOTE", "").strip() == "1"
+        )
 
         if loopback and not has_keys:
             logger.warning(

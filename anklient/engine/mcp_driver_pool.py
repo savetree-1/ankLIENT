@@ -16,6 +16,7 @@ Design (peer-reviewed, implementation-ready per B1 spec):
   - No driver.close() while pool_lock is held.
   - Idle sweeper marks closing but doesn't free capacity until close completes.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -34,6 +35,7 @@ _LEASE_HISTORY_LIMIT = 100
 
 # ── Errors ────────────────────────────────────────────────────────────────
 
+
 class PoolExhaustedError(RuntimeError):
     """Pool is full after acquire_timeout.
 
@@ -48,7 +50,9 @@ class PoolExhaustedError(RuntimeError):
     names the sessions holding slots at exhaustion time.
     """
 
-    def __init__(self, message: str | None = None, active_leases: list[str] | None = None) -> None:
+    def __init__(
+        self, message: str | None = None, active_leases: list[str] | None = None
+    ) -> None:
         if message is None:
             message = "no driver slot available within acquire_timeout"
         if active_leases:
@@ -71,6 +75,7 @@ class PoolSlotUnavailableError(RuntimeError):
 
 # ── Account throttle breaker ──────────────────────────────────────────────
 
+
 class AccountThrottleBreaker:
     """Pool-wide breaker that pauses mutations on account-throttle signals.
 
@@ -85,8 +90,7 @@ class AccountThrottleBreaker:
 
     def is_tripped(self) -> bool:
         return (
-            self._tripped_until is not None
-            and time.monotonic() < self._tripped_until
+            self._tripped_until is not None and time.monotonic() < self._tripped_until
         )
 
     async def trip(self) -> None:
@@ -104,6 +108,7 @@ class AccountThrottleBreaker:
 
 # ── Slot ──────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class DriverSlot:
     """One session's slot in the pool. Transitions: PENDING → ACTIVE → CLOSING → DISOWNED.
@@ -114,6 +119,7 @@ class DriverSlot:
       CLOSING:  closing=True (driver may be set or None; still counts vs capacity)
       DISOWNED: removed from _slots and _active_keys (not reachable)
     """
+
     session_key: str
     driver: Any | None  # CDPDriver | None
     breakers: Any  # BreakerRegistry
@@ -129,6 +135,7 @@ class DriverSlot:
 
 # ── P1.5: Lease accounting records ────────────────────────────────────────
 
+
 @dataclass
 class LeaseRecord:
     """P1.5: per-lease lifecycle record for diagnostics.
@@ -138,6 +145,7 @@ class LeaseRecord:
     for post-hoc RCA. This is pure instrumentation — it does NOT influence
     pool behavior (capacity, eviction, blocking).
     """
+
     lease_id: str
     session_key: str
     acquired_at: float
@@ -146,12 +154,13 @@ class LeaseRecord:
     release_reason: str | None = None  # "normal" | "exception" | "cancellation"
 
 
-
 # ── Lease ─────────────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class DriverLease:
     """Plain carrier for a leased driver. Does NOT implement __aenter__/__aexit__."""
+
     slot: DriverSlot
     driver: Any  # CDPDriver
     breakers: Any  # BreakerRegistry
@@ -185,11 +194,14 @@ class _LeaseContext:
             reason = "cancellation"
         else:
             reason = "exception"
-        await self._pool._release(self._lease.slot, lease_id=self._lease.lease_id, release_reason=reason)
+        await self._pool._release(
+            self._lease.slot, lease_id=self._lease.lease_id, release_reason=reason
+        )
         self._lease = None
 
 
 # ── Pool ──────────────────────────────────────────────────────────────────
+
 
 class McpSessionDriverPool:
     """Lazy, bounded, session-affine pool of CDPDriver instances.
@@ -267,7 +279,9 @@ class McpSessionDriverPool:
         identity (PR #42 review fix #4).
         """
         if self._driver_factory is not None:
-            return await self._driver_factory(self._config, self._transport, self._port, slot)
+            return await self._driver_factory(
+                self._config, self._transport, self._port, slot
+            )
         # Real path: construct + connect a CDPDriver.
         import hashlib
         import os
@@ -284,7 +298,9 @@ class McpSessionDriverPool:
             base = os.environ["W2A_INSTANCE_ID"]
             server_identity = f"{base}:session:{session_hash}"
         else:
-            server_identity = f"mcp:{self._transport}:{self._port}:session:{session_hash}"
+            server_identity = (
+                f"mcp:{self._transport}:{self._port}:session:{session_hash}"
+            )
         instance_id = TabRegistry.derive_instance_id(
             cdp_port=cfg.chrome.cdp_port,
             server_identity=server_identity,
@@ -390,7 +406,9 @@ class McpSessionDriverPool:
 
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
-                        raise PoolExhaustedError(active_leases=self._active_session_keys())
+                        raise PoolExhaustedError(
+                            active_leases=self._active_session_keys()
+                        )
 
                     try:
                         await asyncio.wait_for(
@@ -403,7 +421,9 @@ class McpSessionDriverPool:
                             timeout=remaining,
                         )
                     except TimeoutError:
-                        raise PoolExhaustedError(active_leases=self._active_session_keys())
+                        raise PoolExhaustedError(
+                            active_leases=self._active_session_keys()
+                        )
 
                     if self._shutting_down:
                         raise PoolShuttingDownError()
@@ -433,9 +453,7 @@ class McpSessionDriverPool:
                 raise PoolExhaustedError(active_leases=self._active_session_keys())
 
             try:
-                await asyncio.wait_for(
-                    self._create_sem.acquire(), timeout=remaining
-                )
+                await asyncio.wait_for(self._create_sem.acquire(), timeout=remaining)
                 sem_acquired = True
             except TimeoutError:
                 await self._abandon_pending_slot(materialize_slot)
@@ -484,6 +502,7 @@ class McpSessionDriverPool:
     def _make_breakers(self):
         """Create a fresh BreakerRegistry for a slot."""
         from .breakers import BreakerRegistry
+
         return BreakerRegistry()
 
     def _make_lease(self, slot: DriverSlot) -> DriverLease:
@@ -508,7 +527,9 @@ class McpSessionDriverPool:
         """P1.5: session keys of currently-held leases (for exhaustion dumps)."""
         return sorted({r.session_key for r in self._active_leases.values()})
 
-    async def _release(self, slot: DriverSlot, *, lease_id: str = "", release_reason: str = "normal") -> None:
+    async def _release(
+        self, slot: DriverSlot, *, lease_id: str = "", release_reason: str = "normal"
+    ) -> None:
         """Release a lease: decrement in_flight, update last_used_at.
 
         P1.5: also completes the LeaseRecord (hold duration + reason) and
@@ -540,7 +561,8 @@ class McpSessionDriverPool:
                     "Double-release detected: lease_id=%s not in active_leases "
                     "(session=%s) — lease was already released; skipping "
                     "in_flight decrement to avoid undercount",
-                    lease_id, slot.session_key,
+                    lease_id,
+                    slot.session_key,
                 )
                 skip_decrement = True
         # For untracked releases (lease_id="" — legacy/direct callers) and
@@ -704,14 +726,20 @@ class McpSessionDriverPool:
                 "active_count": len(self._active_leases),
                 "history_count": len(self._lease_history),
                 "active": [
-                    {"lease_id": r.lease_id, "session_key": r.session_key,
-                     "acquired_at": r.acquired_at}
+                    {
+                        "lease_id": r.lease_id,
+                        "session_key": r.session_key,
+                        "acquired_at": r.acquired_at,
+                    }
                     for r in self._active_leases.values()
                 ],
                 "recent": [
-                    {"lease_id": r.lease_id, "session_key": r.session_key,
-                     "hold_duration_s": r.hold_duration_s,
-                     "release_reason": r.release_reason}
+                    {
+                        "lease_id": r.lease_id,
+                        "session_key": r.session_key,
+                        "hold_duration_s": r.hold_duration_s,
+                        "release_reason": r.release_reason,
+                    }
                     for r in self._lease_history[-10:]
                 ],
             },

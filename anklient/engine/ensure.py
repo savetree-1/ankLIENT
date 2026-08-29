@@ -181,7 +181,9 @@ class _StartupLock:
         """
         fh = open(self._path, "w")
         try:
-            self.portalocker.lock(fh, self.portalocker.LOCK_EX | self.portalocker.LOCK_NB)
+            self.portalocker.lock(
+                fh, self.portalocker.LOCK_EX | self.portalocker.LOCK_NB
+            )
         except self.portalocker.LockException:
             fh.close()
             raise _LockBusy()
@@ -214,7 +216,9 @@ def _rest_ready_for_ensure(h: dict | None) -> bool:
         return True
     if h.get("status") == "starting":
         return bool(
-            h.get("chrome_running") and h.get("cdp_connected") and h.get("driver_connected")
+            h.get("chrome_running")
+            and h.get("cdp_connected")
+            and h.get("driver_connected")
         )
     return False
 
@@ -223,7 +227,9 @@ def _rest_health(rest_port: int, timeout: float = 3.0) -> dict | None:
     """GET /health. Returns the parsed JSON dict, or None if unreachable
     (connection refused = ``missing``)."""
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{rest_port}/health", timeout=timeout) as r:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{rest_port}/health", timeout=timeout
+        ) as r:
             return json.loads(r.read())
     except Exception:
         return None
@@ -310,7 +316,9 @@ def _launch_detached(cmd: list[str]) -> subprocess.Popen:
         "stdin": subprocess.DEVNULL,
     }
     if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS
+        kwargs["creationflags"] = (
+            subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS
+        )
     else:
         kwargs["start_new_session"] = True
     return subprocess.Popen(cmd, **kwargs)
@@ -326,7 +334,11 @@ def _find_listener_pid(port: int) -> int | None:
     """
     if sys.platform == "win32":
         return _find_listener_pid_netstat(port)
-    for finder in (_find_listener_pid_lsof, _find_listener_pid_ss, _find_listener_pid_fuser):
+    for finder in (
+        _find_listener_pid_lsof,
+        _find_listener_pid_ss,
+        _find_listener_pid_fuser,
+    ):
         pid = finder(port)
         if pid is not None:
             return pid
@@ -343,7 +355,11 @@ def _find_listener_pid_netstat(port: int) -> int | None:
             # parts[1] is "HOST:PORT" (e.g. "127.0.0.1:8080"). endswith is
             # already exact here (":80" won't match ":8080" — the string ends in
             # "0", not "80"); kept explicit for clarity.
-            if len(parts) >= 5 and "LISTENING" in line and parts[1].endswith(f":{port}"):
+            if (
+                len(parts) >= 5
+                and "LISTENING" in line
+                and parts[1].endswith(f":{port}")
+            ):
                 return int(parts[-1])
     except Exception:
         pass
@@ -411,7 +427,9 @@ def _terminate_pid(pid: int) -> None:
     try:
         if sys.platform == "win32":
             subprocess.run(
-                ["taskkill", "/F", "/T", "/PID", str(pid)], capture_output=True, timeout=10
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                capture_output=True,
+                timeout=10,
             )
         else:
             import signal as _sig
@@ -529,7 +547,9 @@ async def _reconcile_rest(
         return RestReconcileResult(ok=ok)
 
     if status == "degraded":
-        return await _reconcile_degraded(rest_port, cdp_port, config_path, log_level, policy, h)
+        return await _reconcile_degraded(
+            rest_port, cdp_port, config_path, log_level, policy, h
+        )
 
     # starting without full connectivity — wait for it to resolve
     logger.info("REST starting (not fully connected) — waiting")
@@ -581,7 +601,8 @@ async def _reconcile_degraded(
     # Legacy degraded: no open breaker info (transient CDP reconnect, older
     # REST, or malformed snapshot). Poll the standard budget before bouncing.
     logger.info(
-        "REST degraded — waiting up to %.0fs before restart", policy.degraded_poll_budget_s
+        "REST degraded — waiting up to %.0fs before restart",
+        policy.degraded_poll_budget_s,
     )
     deadline = time.monotonic() + policy.degraded_poll_budget_s
     while time.monotonic() < deadline:
@@ -612,7 +633,9 @@ async def _reconcile_degraded(
             return await _wait_timed_breaker(
                 rest_port, cdp_port, config_path, log_level, policy, cls
             )
-    logger.info("REST still degraded after %.0fs — restarting", policy.degraded_poll_budget_s)
+    logger.info(
+        "REST still degraded after %.0fs — restarting", policy.degraded_poll_budget_s
+    )
     ok = await _restart_rest(rest_port, cdp_port, config_path, log_level)
     return RestReconcileResult(ok=ok)
 
@@ -658,11 +681,7 @@ async def _wait_timed_breaker(
             )
             return RestReconcileResult(ok=False, auth_needed=True)
         remaining = cur.cooldown_remaining_s
-        if (
-            cur.timed_open_kind is not None
-            and remaining is not None
-            and remaining <= 0
-        ):
+        if cur.timed_open_kind is not None and remaining is not None and remaining <= 0:
             # Boundary: cooldown just elapsed and a half-open probe may be in
             # flight. Re-fetch once before deciding to restart.
             logger.info("Timed breaker at cooldown boundary — re-fetching health once")
@@ -705,7 +724,9 @@ async def _reconcile_sse(
         # a relaunch would fail to bind with no diagnostic.
         logger.info("SSE port up but handshake failed — stopping broken listener")
         if not await _stop_listener(sse_port, "SSE"):
-            logger.error("Could not stop broken SSE listener on :%d — aborting", sse_port)
+            logger.error(
+                "Could not stop broken SSE listener on :%d — aborting", sse_port
+            )
             return False
 
     logger.info("SSE starting")
@@ -770,7 +791,9 @@ async def run_ensure(
         return 1
 
     try:
-        result = await _reconcile_rest(rest_port, cdp_port, config_path, log_level, policy)
+        result = await _reconcile_rest(
+            rest_port, cdp_port, config_path, log_level, policy
+        )
         if not result.ok:
             if result.auth_needed:
                 # Auth needed: do NOT reconcile SSE — a login is required first.

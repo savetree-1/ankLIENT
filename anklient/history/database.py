@@ -3,20 +3,21 @@ import sqlite3
 
 
 def get_db_path() -> str:
-    # Use ~/.anklient for global data, fallback to local if needed, 
+    # Use ~/.anklient for global data, fallback to local if needed,
     # but for this iteration, let's use ~/.anklient/anklient.db
     home_dir = pathlib.Path.home()
     app_dir = home_dir / ".anklient"
     app_dir.mkdir(exist_ok=True)
     return str(app_dir / "anklient.db")
 
+
 def init_db(db_path: str = None):
     if db_path is None:
         db_path = get_db_path()
-        
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,7 +32,7 @@ def init_db(db_path: str = None):
             status TEXT
         )
     """)
-    
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS prompts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,6 +46,6 @@ def init_db(db_path: str = None):
             last_used DATETIME
         )
     """)
-    
+
     conn.commit()
     return conn

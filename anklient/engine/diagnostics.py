@@ -40,8 +40,14 @@ EXPECTED_SHAPES: dict[str, dict] = {
         "required_keys": ["id", "name"],
         "assertions": [("gizmo_type", "snorlax")],
     },
-    "update_project_instructions": {"kind": "dict", "required_keys": ["success", "project_id"]},
-    "archive_conversation": {"kind": "dict", "required_keys": ["success", "conversation_id"]},
+    "update_project_instructions": {
+        "kind": "dict",
+        "required_keys": ["success", "project_id"],
+    },
+    "archive_conversation": {
+        "kind": "dict",
+        "required_keys": ["success", "conversation_id"],
+    },
     "delete_conversation": {"kind": "bool"},
     "delete_memory": {"kind": "bool"},
     "delete_project": {"kind": "dict", "required_keys": ["success", "project_id"]},
@@ -140,7 +146,7 @@ def redact(obj: Any) -> Any:
             return _redact_string(obj)
         # Truncate so the total (body + marker) fits within the cap.
         marker = "...<truncated>"
-        return _redact_string(obj[:_MAX_BODY_CHARS - len(marker)] + marker)
+        return _redact_string(obj[: _MAX_BODY_CHARS - len(marker)] + marker)
     return obj
 
 
@@ -155,22 +161,32 @@ class DiagnosticsDir:
         # order, even when multiple captures land in the same wall-clock second.
         self._seq = 0
 
-    def capture(self, *, function: str, request: Any, response: Any,
-                expected: Any, actual: Any, mismatch: str) -> Path:
+    def capture(
+        self,
+        *,
+        function: str,
+        request: Any,
+        response: Any,
+        expected: Any,
+        actual: Any,
+        mismatch: str,
+    ) -> Path:
         """Write a redacted artifact and enforce the per-function volume cap."""
         ts = time.strftime("%Y%m%d-%H%M%S")
         self._seq += 1
         # seq is zero-padded so lexical sort == chronological order.
         path = self.base / f"{function}-{ts}-{self._seq:06d}.json"
-        payload = redact({
-            "function": function,
-            "timestamp": ts,
-            "request": request,
-            "response": response,
-            "expected": expected,
-            "actual": actual,
-            "mismatch": mismatch,
-        })
+        payload = redact(
+            {
+                "function": function,
+                "timestamp": ts,
+                "request": request,
+                "response": response,
+                "expected": expected,
+                "actual": actual,
+                "mismatch": mismatch,
+            }
+        )
         path.write_text(json.dumps(payload, indent=2, default=str))
         self._enforce_cap(function)
         return path
@@ -178,7 +194,7 @@ class DiagnosticsDir:
     def _enforce_cap(self, function: str) -> None:
         files = sorted(self.base.glob(f"{function}-*.json"))
         excess = len(files) - self.max_per_function
-        for f in files[:max(0, excess)]:
+        for f in files[: max(0, excess)]:
             try:
                 f.unlink()
             except OSError:
@@ -211,7 +227,11 @@ def set_capture_enabled(enabled: bool) -> None:
 def apply_env_enablement() -> None:
     """Enable capture when W2A_DIAGNOSE is truthy (called at server startup)."""
     global _capture_enabled
-    _capture_enabled = os.environ.get("W2A_DIAGNOSE", "").lower() in ("1", "true", "yes")
+    _capture_enabled = os.environ.get("W2A_DIAGNOSE", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 
 def _safe_classify_and_capture(
@@ -266,25 +286,32 @@ def diagnose(function_name: str, capture_js: Callable[[Any], Any] | None = None)
     The wrapped method's return value / exception is always passed through
     unchanged — detection is a side channel, never a behavior change.
     """
+
     def decorator(fn):
         if asyncio.iscoroutinefunction(fn):
+
             @functools.wraps(fn)
             async def async_wrapper(self, *args, **kwargs):
                 result = await fn(self, *args, **kwargs)
                 _safe_classify_and_capture(
-                    function_name, result,
+                    function_name,
+                    result,
                     (lambda: capture_js(self)) if capture_js else None,
                 )
                 return result
+
             return async_wrapper
 
         @functools.wraps(fn)
         def sync_wrapper(self, *args, **kwargs):
             result = fn(self, *args, **kwargs)
             _safe_classify_and_capture(
-                function_name, result,
+                function_name,
+                result,
                 (lambda: capture_js(self)) if capture_js else None,
             )
             return result
+
         return sync_wrapper
+
     return decorator

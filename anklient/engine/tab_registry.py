@@ -59,6 +59,7 @@ def _pid_alive(pid: int) -> bool:
     if os.name == "nt":
         try:
             import ctypes
+
             PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
             kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
             handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
@@ -180,7 +181,9 @@ class TabRegistry:
                 # Atomic claim: write ourselves as the new owner before
                 # releasing the lock, so a concurrent process can't also
                 # reclaim.
-                data[self.instance_id] = self._fresh_entry(target_id, entry.get("url", ""))
+                data[self.instance_id] = self._fresh_entry(
+                    target_id, entry.get("url", "")
+                )
                 _save_registry(self.registry_path, data)
                 return target_id
         return None

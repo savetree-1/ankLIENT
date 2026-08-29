@@ -10,48 +10,56 @@ class HistoryRepository:
 
     def save(self, item: HistoryItem) -> int:
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO history (
                 timestamp, prompt, response, category, ttft_ms, total_ms, word_count, char_count, status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            item.timestamp.isoformat(),
-            item.prompt,
-            item.response,
-            item.category,
-            item.ttft_ms,
-            item.total_ms,
-            item.word_count,
-            item.char_count,
-            item.status
-        ))
+        """,
+            (
+                item.timestamp.isoformat(),
+                item.prompt,
+                item.response,
+                item.category,
+                item.ttft_ms,
+                item.total_ms,
+                item.word_count,
+                item.char_count,
+                item.status,
+            ),
+        )
         self.conn.commit()
         item.id = cursor.lastrowid
         return item.id
 
     def get_recent(self, limit: int = 10) -> list[HistoryItem]:
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT id, timestamp, prompt, response, category, ttft_ms, total_ms, word_count, char_count, status
             FROM history
             ORDER BY timestamp DESC
             LIMIT ?
-        """, (limit,))
-        
+        """,
+            (limit,),
+        )
+
         results = []
         for row in cursor.fetchall():
-            results.append(HistoryItem(
-                id=row[0],
-                timestamp=datetime.fromisoformat(row[1]),
-                prompt=row[2],
-                response=row[3],
-                category=row[4],
-                ttft_ms=row[5],
-                total_ms=row[6],
-                word_count=row[7],
-                char_count=row[8],
-                status=row[9]
-            ))
+            results.append(
+                HistoryItem(
+                    id=row[0],
+                    timestamp=datetime.fromisoformat(row[1]),
+                    prompt=row[2],
+                    response=row[3],
+                    category=row[4],
+                    ttft_ms=row[5],
+                    total_ms=row[6],
+                    word_count=row[7],
+                    char_count=row[8],
+                    status=row[9],
+                )
+            )
         return results
 
     def clear(self):

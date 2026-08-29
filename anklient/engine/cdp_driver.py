@@ -95,6 +95,7 @@ from .chatgpt_dom import (  # noqa: F401
 # Stages (each must pass for the next to matter):
 #   url_correct → document_ready → app_shell_present → composer_present
 
+
 @dataclass
 class NavigationReadinessProbe:
     """Results of a single navigation-readiness probe poll.
@@ -103,6 +104,7 @@ class NavigationReadinessProbe:
     message naming the stage that failed. The JS probe evaluates all stages
     in one ``Runtime.evaluate`` call (no extra round-trips).
     """
+
     url: str
     ready_state: str
     app_shell_present: bool
@@ -237,7 +239,9 @@ class GenerationStuckError(RuntimeError):
         # P1 structured fields (optional for back-compat with phase-1 sites).
         self.stall_kind = stall_kind
         self.model_class = model_class
-        self.elapsed_seconds = float(elapsed_seconds) if elapsed_seconds is not None else None
+        self.elapsed_seconds = (
+            float(elapsed_seconds) if elapsed_seconds is not None else None
+        )
         self.generation_active_signal = generation_active_signal
         self.turn_id = turn_id
         # Human-readable message includes the stall kind if available.
@@ -282,6 +286,7 @@ class CDPReconnectError(RuntimeError):
 # Phrases ChatGPT uses in its rate-limit pop-up + the ``is_rate_limited_text``
 # matcher moved to completion_detector.py (Phase 5 PR4); re-exported above.
 
+
 def parse_retry_after(text: str, default: int = RATE_LIMIT_DEFAULT_RETRY_AFTER) -> int:
     """Extract a retry-after duration in seconds from ChatGPT's pop-up text.
 
@@ -318,7 +323,8 @@ def parse_retry_after(text: str, default: int = RATE_LIMIT_DEFAULT_RETRY_AFTER) 
 
     # "<n> minute(s)" → seconds = n * 60
     m = re.search(
-        r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:minutes?|mins?)", lowered
+        r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:minutes?|mins?)",
+        lowered,
     )
     if m:
         n = _to_num(m.group(1))
@@ -327,7 +333,8 @@ def parse_retry_after(text: str, default: int = RATE_LIMIT_DEFAULT_RETRY_AFTER) 
 
     # "<n> second(s)" / "<n> sec(s)"
     m = re.search(
-        r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:seconds?|secs?)", lowered
+        r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:seconds?|secs?)",
+        lowered,
     )
     if m:
         n = _to_num(m.group(1))
@@ -338,7 +345,6 @@ def parse_retry_after(text: str, default: int = RATE_LIMIT_DEFAULT_RETRY_AFTER) 
 
 
 class CDPDriver:
-
     # ── Backend API Helpers (ported from suphotP/chatgpt-api) ────────────
 
     async def _get_sentinel_headers(self) -> dict[str, str]:
@@ -358,9 +364,7 @@ class CDPDriver:
             return JSON.stringify(await res.json());
         })()
         """
-        raw = await self._js_with_data_strict(
-            js_req, {"token": self._access_token}
-        )
+        raw = await self._js_with_data_strict(js_req, {"token": self._access_token})
         req_data = json.loads(raw)
         sentinel_token = req_data.get("token")
         proof = req_data.get("proofofwork", {})
@@ -446,7 +450,13 @@ class CDPDriver:
 
     # ── Backend API: Image upload ────────────────────────────────────────
 
-    async def api_upload_image(self, b64_data: str, *, mime_type: str = "image/png", file_name: str = "upload.png") -> dict:
+    async def api_upload_image(
+        self,
+        b64_data: str,
+        *,
+        mime_type: str = "image/png",
+        file_name: str = "upload.png",
+    ) -> dict:
         """Upload an image via the hidden 3-step Azure handshake.
 
         Returns ``{"success": True, "file_id": "file_...", "size": N}``
@@ -484,14 +494,21 @@ class CDPDriver:
         """
         raw = await self._js_with_data_strict(
             js,
-            {"token": self._access_token, "b64": b64_data, "mime": mime_type, "fname": file_name},
+            {
+                "token": self._access_token,
+                "b64": b64_data,
+                "mime": mime_type,
+                "fname": file_name,
+            },
             timeout=30,
         )
         return json.loads(raw)
 
     # ── Backend API: Vision chat ─────────────────────────────────────────
 
-    async def api_send_vision_chat(self, text: str, file_id: str, file_size: int) -> str:
+    async def api_send_vision_chat(
+        self, text: str, file_id: str, file_size: int
+    ) -> str:
         """Upload an image + prompt via backend API and return the response text."""
         import uuid
 
@@ -503,28 +520,42 @@ class CDPDriver:
             "action": "next",
             "parent_message_id": parent_id,
             "model": "gpt-4o",
-            "messages": [{
-                "id": msg_id,
-                "author": {"role": "user"},
-                "content": {
-                    "content_type": "multimodal_text",
-                    "parts": [
-                        {"asset_pointer": f"file-service://{file_id}", "size_bytes": file_size},
-                        text,
-                    ],
-                },
-                "metadata": {
-                    "attachments": [{"id": file_id, "name": "upload.png", "mimeType": "image/png", "size": file_size}],
-                },
-            }],
+            "messages": [
+                {
+                    "id": msg_id,
+                    "author": {"role": "user"},
+                    "content": {
+                        "content_type": "multimodal_text",
+                        "parts": [
+                            {
+                                "asset_pointer": f"file-service://{file_id}",
+                                "size_bytes": file_size,
+                            },
+                            text,
+                        ],
+                    },
+                    "metadata": {
+                        "attachments": [
+                            {
+                                "id": file_id,
+                                "name": "upload.png",
+                                "mimeType": "image/png",
+                                "size": file_size,
+                            }
+                        ],
+                    },
+                }
+            ],
         }
 
         stream = await self._api_post_conversation(headers, payload, timeout=60)
         return self._parse_assistant_text(stream)
 
-    async def api_image_edit(self, prompt: str, input_images: list[dict], aspect_ratio: str = "auto") -> list[str]:
+    async def api_image_edit(
+        self, prompt: str, input_images: list[dict], aspect_ratio: str = "auto"
+    ) -> list[str]:
         """Request an image edit/composite from ChatGPT and return the generated image asset IDs.
-        
+
         Args:
             prompt: The instruction for editing.
             input_images: List of dicts with {"file_id": str, "size": int}
@@ -533,7 +564,7 @@ class CDPDriver:
         import uuid
 
         headers = await self._get_sentinel_headers()
-        
+
         # Build prompt identical to chatgpt-api image_edit_prompt
         parts = [
             prompt.strip(),
@@ -548,9 +579,21 @@ class CDPDriver:
         content_parts = []
         attachments = []
         for img in input_images:
-            content_parts.append({"asset_pointer": f"file-service://{img['file_id']}", "size_bytes": img['size']})
-            attachments.append({"id": img['file_id'], "name": "upload.png", "mimeType": "image/png", "size": img['size']})
-        
+            content_parts.append(
+                {
+                    "asset_pointer": f"file-service://{img['file_id']}",
+                    "size_bytes": img["size"],
+                }
+            )
+            attachments.append(
+                {
+                    "id": img["file_id"],
+                    "name": "upload.png",
+                    "mimeType": "image/png",
+                    "size": img["size"],
+                }
+            )
+
         content_parts.append(edit_prompt)
 
         payload = {
@@ -558,30 +601,31 @@ class CDPDriver:
             "parent_message_id": str(uuid.uuid4()),
             "model": "gpt-4o",
             "system_hints": ["picture_v2"],
-            "messages": [{
-                "id": str(uuid.uuid4()),
-                "author": {"role": "user"},
-                "content": {
-                    "content_type": "multimodal_text",
-                    "parts": content_parts,
-                },
-                "metadata": {
-                    "attachments": attachments,
-                    "source": "images_edits"
-                },
-            }],
+            "messages": [
+                {
+                    "id": str(uuid.uuid4()),
+                    "author": {"role": "user"},
+                    "content": {
+                        "content_type": "multimodal_text",
+                        "parts": content_parts,
+                    },
+                    "metadata": {"attachments": attachments, "source": "images_edits"},
+                }
+            ],
         }
 
         # Issue the POST request to start the generation
         stream = await self._api_post_conversation(headers, payload, timeout=60)
-        
+
         # We must extract the conversation ID to poll for the DALL-E widget
         conversation_id = None
         import json
+
         for line in stream.split("\n"):
             if line.startswith("data: "):
                 raw = line[6:]
-                if raw == "[DONE]": break
+                if raw == "[DONE]":
+                    break
                 try:
                     data = json.loads(raw)
                     if "conversation_id" in data and not conversation_id:
@@ -594,12 +638,15 @@ class CDPDriver:
 
         # Poll the conversation mapping until the generated asset pointer appears
         input_ids = {img["file_id"] for img in input_images}
-        
+
         def _walk_for_assets(obj, found=None):
             if found is None:
                 found = []
             if isinstance(obj, dict):
-                if obj.get("content_type") == "image_asset_pointer" and "asset_pointer" in obj:
+                if (
+                    obj.get("content_type") == "image_asset_pointer"
+                    and "asset_pointer" in obj
+                ):
                     ptr = obj["asset_pointer"]
                     if ptr.startswith("file-service://"):
                         found.append(ptr.replace("file-service://", ""))
@@ -612,7 +659,7 @@ class CDPDriver:
                     _walk_for_assets(v, found)
             return found
 
-        for _ in range(30): # Poll up to 60s
+        for _ in range(30):  # Poll up to 60s
             await asyncio.sleep(2)
             js = f"""
             (async () => {{
@@ -622,15 +669,17 @@ class CDPDriver:
                 return await res.text();
             }})()
             """
-            raw = await self._js_with_data_strict(js, {"token": self._access_token}, timeout=15)
+            raw = await self._js_with_data_strict(
+                js, {"token": self._access_token}, timeout=15
+            )
             data = json.loads(raw)
             mapping = data.get("mapping", {})
-            
+
             assets = []
             for node in mapping.values():
                 if "message" in node:
                     assets.extend(_walk_for_assets(node["message"]))
-            
+
             # Filter out the input images
             new_assets = [a for a in set(assets) if a not in input_ids]
             if new_assets:
@@ -640,7 +689,9 @@ class CDPDriver:
 
     # ── Backend API: Deep Research ───────────────────────────────────────
 
-    async def api_deep_research(self, prompt: str, *, model: str = "o4-mini-deep-research") -> str:
+    async def api_deep_research(
+        self, prompt: str, *, model: str = "o4-mini-deep-research"
+    ) -> str:
         """Run a Deep Research query and return the final report text.
 
         Sends the prompt with research system-hints. For short prompts
@@ -658,16 +709,18 @@ class CDPDriver:
             "parent_message_id": parent_id,
             "model": model,
             "system_hints": ["research"],
-            "messages": [{
-                "id": msg_id,
-                "author": {"role": "user"},
-                "content": {"content_type": "text", "parts": [prompt]},
-                "metadata": {
-                    "serialization_metadata": {"custom_symbol_offsets": []},
-                    "deep_research_version": "standard",
-                    "venus_model_variant": "standard",
-                },
-            }],
+            "messages": [
+                {
+                    "id": msg_id,
+                    "author": {"role": "user"},
+                    "content": {"content_type": "text", "parts": [prompt]},
+                    "metadata": {
+                        "serialization_metadata": {"custom_symbol_offsets": []},
+                        "deep_research_version": "standard",
+                        "venus_model_variant": "standard",
+                    },
+                }
+            ],
         }
 
         stream = await self._api_post_conversation(headers, payload, timeout=120)
@@ -799,8 +852,12 @@ class CDPDriver:
         # tab). None disables the registry (e.g. adopt mode, tests).
         from .tab_registry import TabRegistry
 
-        self.instance_id = instance_id or TabRegistry.derive_instance_id(cdp_port=cdp_port)
-        self._tab_registry = TabRegistry(self.instance_id) if tab_mode == "owned" else None
+        self.instance_id = instance_id or TabRegistry.derive_instance_id(
+            cdp_port=cdp_port
+        )
+        self._tab_registry = (
+            TabRegistry(self.instance_id) if tab_mode == "owned" else None
+        )
         self._heartbeat_task: asyncio.Task | None = None
         self._ws = None
         self._msg_id = 0
@@ -895,7 +952,9 @@ class CDPDriver:
         try:
             await self._identity_listener.attach()
         except Exception as e:
-            logger.warning("identity_listener_attach_failed (will degrade to dual-anchor): %s", e)
+            logger.warning(
+                "identity_listener_attach_failed (will degrade to dual-anchor): %s", e
+            )
 
     async def connect(self) -> None:
         """Connect to Chrome's CDP and authenticate.
@@ -1004,7 +1063,9 @@ class CDPDriver:
                         f"Owned-tab creation failed and shared-tab fallback "
                         f"is disabled in owned mode: {e}"
                     ) from e
-                logger.warning("Tab isolation failed (%s) — falling back to shared tab", e)
+                logger.warning(
+                    "Tab isolation failed (%s) — falling back to shared tab", e
+                )
                 self._target_id = None
                 self._owns_target = False
                 ws_url = await self._find_page_ws()
@@ -1267,7 +1328,9 @@ class CDPDriver:
 
         pages = [t for t in targets if t.get("type") == "page"]
         if not pages:
-            raise RuntimeError("No browser pages found — is Chrome running with chatgpt.com?")
+            raise RuntimeError(
+                "No browser pages found — is Chrome running with chatgpt.com?"
+            )
 
         # Prefer chatgpt.com page
         chatgpt = [
@@ -1301,7 +1364,9 @@ class CDPDriver:
         logger.info("Using page (fallback): %s", target.get("title", "")[:60])
         return target["webSocketDebuggerUrl"]
 
-    async def _browser_cdp(self, method: str, params: dict = None, timeout: float = 10) -> dict:
+    async def _browser_cdp(
+        self, method: str, params: dict = None, timeout: float = 10
+    ) -> dict:
         """Send a browser-domain CDP command via a short-lived browser WS.
 
         Used for Target.createTarget and Target.closeTarget. Opens a fresh
@@ -1319,7 +1384,9 @@ class CDPDriver:
         browser_ws_url = version["webSocketDebuggerUrl"]
         mid = self._msg_id + 100000  # offset to avoid collision with page-level ids
         async with websockets.connect(browser_ws_url, max_size=10 * 1024 * 1024) as bws:
-            await bws.send(json.dumps({"id": mid, "method": method, "params": params or {}}))
+            await bws.send(
+                json.dumps({"id": mid, "method": method, "params": params or {}})
+            )
             deadline = time.monotonic() + timeout
             while time.monotonic() < deadline:
                 raw = await asyncio.wait_for(
@@ -1337,7 +1404,9 @@ class CDPDriver:
         then looks up the new tab's webSocketDebuggerUrl via /json/list.
         Returns the page WS URL. Sets self._target_id.
         """
-        resp = await self._browser_cdp("Target.createTarget", {"url": "https://chatgpt.com/"})
+        resp = await self._browser_cdp(
+            "Target.createTarget", {"url": "https://chatgpt.com/"}
+        )
         if "error" in resp:
             raise RuntimeError(f"Target.createTarget failed: {resp['error']}")
         self._target_id = resp.get("result", {}).get("targetId")
@@ -1360,7 +1429,9 @@ class CDPDriver:
                         logger.info("Owned tab WS: %s", ws_url[:80])
                         return ws_url
             await asyncio.sleep(0.5)
-        raise RuntimeError(f"Created tab {self._target_id} but couldn't find its WS URL")
+        raise RuntimeError(
+            f"Created tab {self._target_id} but couldn't find its WS URL"
+        )
 
     def _find_owned_tab_ws(self) -> str | None:
         """Look up an owned tab's WS URL from /json/list. Returns None if gone."""
@@ -1469,7 +1540,10 @@ class CDPDriver:
                     "})()"
                 )
                 state = json.loads(raw) if raw else {}
-                if "chatgpt.com" in (state.get("href") or "") and state.get("ready") != "loading":
+                if (
+                    "chatgpt.com" in (state.get("href") or "")
+                    and state.get("ready") != "loading"
+                ):
                     return True
             except (ValueError, TypeError):
                 pass
@@ -1529,7 +1603,9 @@ class CDPDriver:
         Delegated to CDPTransport (Phase 5 PR2 extraction)."""
         return await self._transport._js(expr, timeout)
 
-    async def _js_with_data(self, expr_template: str, data: dict, timeout: float = 15) -> str:
+    async def _js_with_data(
+        self, expr_template: str, data: dict, timeout: float = 15
+    ) -> str:
         """Evaluate JS with safely injected ``__D`` data variables (soft).
 
         Delegated to CDPTransport (Phase 5 PR2 extraction)."""
@@ -1581,7 +1657,8 @@ class CDPDriver:
         )
         if picker_clicked != "clicked":
             logger.warning(
-                "Model picker not found: %s — proceeding with active model", picker_clicked
+                "Model picker not found: %s — proceeding with active model",
+                picker_clicked,
             )
             return False
 
@@ -1635,7 +1712,9 @@ class CDPDriver:
             except Exception:
                 pass  # best-effort
         logger.warning(
-            "Model '%s' not found in picker: %s — proceeding with active model", slug, result
+            "Model '%s' not found in picker: %s — proceeding with active model",
+            slug,
+            result,
         )
         return False
 
@@ -1678,7 +1757,9 @@ class CDPDriver:
                     # #14: verify we actually landed on chatgpt.com, not an
                     # error/recovery page that happens to have a textarea.
                     if "chatgpt.com" not in actual_url:
-                        raise RuntimeError(f"Navigation landed on unexpected URL: {actual_url}")
+                        raise RuntimeError(
+                            f"Navigation landed on unexpected URL: {actual_url}"
+                        )
                     logger.info("Page ready: %s", actual_url)
                     break
             except (json.JSONDecodeError, TypeError):
@@ -1750,7 +1831,9 @@ class CDPDriver:
         last_probe: NavigationReadinessProbe | None = None
         last_js_error: str | None = None
         url_was_correct = False  # track if URL was ever correct (for displacement)
-        displacement_count = 0  # P2 review: debounce — require 2 consecutive wrong polls
+        displacement_count = (
+            0  # P2 review: debounce — require 2 consecutive wrong polls
+        )
 
         for _ in range(30):
             try:
@@ -1803,11 +1886,12 @@ class CDPDriver:
             if self._current_conv_id == conversation_id:
                 self._current_conv_id = None
             if last_probe is not None:
-                url_correct = self._is_url_at_conversation(last_probe.url, conversation_id)
+                url_correct = self._is_url_at_conversation(
+                    last_probe.url, conversation_id
+                )
                 stage = last_probe.diagnostic_summary(url_correct)
                 raise RuntimeError(
-                    f"Navigation to {conversation_id} failed after 15s — "
-                    f"stage: {stage}"
+                    f"Navigation to {conversation_id} failed after 15s — stage: {stage}"
                 )
             raise RuntimeError(
                 f"Navigation to {conversation_id} failed — all probes errored "
@@ -1876,7 +1960,9 @@ class CDPDriver:
         if not await self._is_live_conversation_url(conversation_id):
             if self._current_conv_id == conversation_id:
                 self._current_conv_id = None
-            raise RuntimeError(f"Failed to restore conversation context: {conversation_id}")
+            raise RuntimeError(
+                f"Failed to restore conversation context: {conversation_id}"
+            )
 
     # ── Message Input ─────────────────────────────────────────
 
@@ -1935,9 +2021,7 @@ class CDPDriver:
             ").length"
         )
         user_selector = (
-            "document.querySelectorAll("
-            "'[data-message-author-role=\"user\"]'"
-            ").length"
+            "document.querySelectorAll('[data-message-author-role=\"user\"]').length"
         )
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
@@ -1984,8 +2068,7 @@ class CDPDriver:
             # Retry or fail-closed.
             if attempt < max_attempts:
                 logger.warning(
-                    "send_baseline_failed: attempt=%d error=%s "
-                    "conv_id=%s — retrying",
+                    "send_baseline_failed: attempt=%d error=%s conv_id=%s — retrying",
                     attempt,
                     err,
                     self._current_conv_id or "(none)",
@@ -2103,14 +2186,17 @@ class CDPDriver:
         if conv_id is None:
             # Fresh chat — no backend anchor possible until URL resolves.
             return TurnAnchor(
-                sent_text=text, mode="fresh_chat",
+                sent_text=text,
+                mode="fresh_chat",
                 pre_send_wall_time=pre_send_wall,
                 conversation_id_at_capture=None,
             )
 
         # Existing conversation — fetch the pre-send backend mapping for anchor.
         try:
-            mapping = await self._backend_client._fetch_recent_conversation_projection(conv_id)
+            mapping = await self._backend_client._fetch_recent_conversation_projection(
+                conv_id
+            )
             nodes = mapping.get("nodes") or {}
             # Find latest user + assistant nodes by create_time.
             latest_user_id, latest_user_ct = None, None
@@ -2121,11 +2207,14 @@ class CDPDriver:
                 if role == "user" and (latest_user_ct is None or ct > latest_user_ct):
                     latest_user_id = node.get("id") or _nid
                     latest_user_ct = ct
-                elif role == "assistant" and (latest_asst_ct is None or ct > latest_asst_ct):
+                elif role == "assistant" and (
+                    latest_asst_ct is None or ct > latest_asst_ct
+                ):
                     latest_asst_id = node.get("id") or _nid
                     latest_asst_ct = ct
             return TurnAnchor(
-                sent_text=text, mode="existing_conversation",
+                sent_text=text,
+                mode="existing_conversation",
                 latest_user_node_id=latest_user_id,
                 latest_user_create_time=latest_user_ct,
                 latest_assistant_node_id=latest_asst_id,
@@ -2137,15 +2226,18 @@ class CDPDriver:
             # Transient backend failure — degrade to wall-clock freshness.
             # AuthExpiredError propagates (caller's responsibility).
             from .cdp_driver import AuthExpiredError
+
             if isinstance(e, AuthExpiredError):
                 raise
             logger.warning(
                 "turn_anchor_degraded: backend anchor fetch failed for %s: %s — "
                 "using degraded_existing mode (sent_text + wall-clock freshness)",
-                conv_id, e,
+                conv_id,
+                e,
             )
             return TurnAnchor(
-                sent_text=text, mode="degraded_existing",
+                sent_text=text,
+                mode="degraded_existing",
                 pre_send_wall_time=pre_send_wall,
                 conversation_id_at_capture=conv_id,
             )
@@ -2206,7 +2298,9 @@ class CDPDriver:
             # A2 Step 6: wait for the IdentityListener to capture the UUID.
             captured_uuid = None
             if capture_scope is not None:
-                captured_uuid = await self._identity_listener.wait_for_captured_uuid(timeout=5.0)
+                captured_uuid = await self._identity_listener.wait_for_captured_uuid(
+                    timeout=5.0
+                )
 
             # P0 send acknowledgment (ChatGPT review, conv 6a52f0f3):
             # click_send dispatches synthetic mouse events — that proves the
@@ -2238,7 +2332,9 @@ class CDPDriver:
                     # Probe failed (JS error, mock, unusual DOM). Don't block
                     # the send — let completion detection proceed. Log so the
                     # failure is traceable.
-                    logger.debug("Send acknowledgment probe failed (non-blocking): %s", ack_err)
+                    logger.debug(
+                        "Send acknowledgment probe failed (non-blocking): %s", ack_err
+                    )
 
             # A2 Step 7: build the final anchor (fallback + captured UUID).
             turn_anchor = fallback_anchor.with_captured_id(captured_uuid)
@@ -2288,7 +2384,7 @@ class CDPDriver:
                     last_diagnostic = result.diagnostic or {}
                     if result.status == "matched" and result.text:
                         if len(result.text) > len(last_dom_text):
-                            yield StreamChunk(delta=result.text[len(last_dom_text):])
+                            yield StreamChunk(delta=result.text[len(last_dom_text) :])
                             last_dom_text = result.text
                         break
                     if result.status == "non_text":
@@ -2297,7 +2393,10 @@ class CDPDriver:
                             for asset in result.assets:
                                 import json
                                 import re
-                                match = re.search(r'file-service://(file-[a-zA-Z0-9\-]+)', asset)
+
+                                match = re.search(
+                                    r"file-service://(file-[a-zA-Z0-9\-]+)", asset
+                                )
                                 if match:
                                     asset_id = match.group(1)
                                     try:
@@ -2312,7 +2411,10 @@ class CDPDriver:
                                             "    return JSON.stringify(data);"
                                             "  } catch(e) { return JSON.stringify({error: e.message}); }"
                                             "})()",
-                                            {"token": self._access_token, "asset_id": asset_id},
+                                            {
+                                                "token": self._access_token,
+                                                "asset_id": asset_id,
+                                            },
                                             timeout=15,
                                         )
                                         dl_data = json.loads(raw_dl)
@@ -2321,7 +2423,9 @@ class CDPDriver:
                                             msg = f"\n![Generated Image]({img_url})\n"
                                             yield StreamChunk(delta=msg)
                                     except Exception as e:
-                                        yield StreamChunk(delta=f"\n[Failed to download image: {e}]\n")
+                                        yield StreamChunk(
+                                            delta=f"\n[Failed to download image: {e}]\n"
+                                        )
                             break  # We generated the image!
                         # P2.5 RCA fix: non_text is NOT terminal here. The backend
                         # propagates intermediary nodes (reasoning_recap, thoughts,
@@ -2333,7 +2437,11 @@ class CDPDriver:
                         # Now: keep polling (like not_ready) — the text node may
                         # still be propagating. Only after the loop exhausts do we
                         # yield the placeholder.
-                    if result.status in ("ambiguous", "degraded_not_fresh", "fetch_failed"):
+                    if result.status in (
+                        "ambiguous",
+                        "degraded_not_fresh",
+                        "fetch_failed",
+                    ):
                         # Keep polling — these may resolve as the backend settles.
                         pass
                     # not_ready → keep polling.
@@ -2386,7 +2494,9 @@ class CDPDriver:
         to tri-state via ``collapse_to_end_turn_status``.
         """
         return await self._backend_client._fetch_end_turn_for_turn(
-            conversation_id, anchor, had_non_text_content=had_non_text_content,
+            conversation_id,
+            anchor,
+            had_non_text_content=had_non_text_content,
         )
 
     async def _conversation_id_from_url(self) -> str:
@@ -2482,7 +2592,9 @@ class CDPDriver:
         memory_scope: str = "project_v2",
     ) -> dict:
         """Create a new ChatGPT project. Delegated to BackendClient (Phase 5 PR1)."""
-        return await self._backend_client.create_project(name, instructions, memory_scope)
+        return await self._backend_client.create_project(
+            name, instructions, memory_scope
+        )
 
     @diagnose(
         "update_project_instructions",
@@ -2499,7 +2611,9 @@ class CDPDriver:
         """Update a project's custom instructions.
 
         Delegated to BackendClient (Phase 5 PR1 extraction)."""
-        return await self._backend_client.update_project_instructions(project_id, instructions)
+        return await self._backend_client.update_project_instructions(
+            project_id, instructions
+        )
 
     async def get_project_detail(self, project_id: str) -> dict:
         """Get full project/gizmo detail. Delegated to BackendClient (Phase 5 PR1)."""
@@ -2514,7 +2628,9 @@ class CDPDriver:
             {"archive": "<arg>"},
         ),
     )
-    async def archive_conversation(self, conversation_id: str, archive: bool = True) -> bool:
+    async def archive_conversation(
+        self, conversation_id: str, archive: bool = True
+    ) -> bool:
         """Archive or unarchive a conversation. Delegated to BackendClient (Phase 5 PR1)."""
         return await self._backend_client.archive_conversation(conversation_id, archive)
 
@@ -2631,7 +2747,9 @@ class CDPDriver:
         # side-effects (killing a tab the user expects to stay open).
         if self._target_id and self._owns_target:
             try:
-                await self._browser_cdp("Target.closeTarget", {"targetId": self._target_id})
+                await self._browser_cdp(
+                    "Target.closeTarget", {"targetId": self._target_id}
+                )
                 logger.info("Closed owned tab: %s", self._target_id)
             except Exception as e:
                 logger.debug("Could not close owned tab %s: %s", self._target_id, e)

@@ -15,6 +15,7 @@ Resolution order (per B1 §6):
 
 Never generates a random per-request key.
 """
+
 from __future__ import annotations
 
 import logging
@@ -55,7 +56,9 @@ def current_mcp_session_key(
         # a handler). Fall through to transport/pool-mode defaults below.
         pass
     except Exception:
-        logger.debug("session_key: unexpected error reading request_context", exc_info=True)
+        logger.debug(
+            "session_key: unexpected error reading request_context", exc_info=True
+        )
 
     # No session_id found — resolve by transport and pool mode.
     if transport == "stdio":

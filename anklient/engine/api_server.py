@@ -87,7 +87,9 @@ class APIServer:
         self.app.router.add_get("/v1/chatgpt/usage", self._handle_usage)
         self.app.router.add_post("/v1/chatgpt/vision", self._handle_vision)
         self.app.router.add_post("/v1/chatgpt/research", self._handle_research)
-        self.app.router.add_get("/v1/chatgpt/files/{file_id}/download", self._handle_file_download)
+        self.app.router.add_get(
+            "/v1/chatgpt/files/{file_id}/download", self._handle_file_download
+        )
         self.app.router.add_post("/v1/images/edits", self._handle_image_edit)
         self.app.router.add_get("/health", self._handle_health)
         self.app.router.add_get("/", self._handle_health)
@@ -172,7 +174,10 @@ class APIServer:
         # but "broken" invites a destructive supervisor restart, while
         # "degraded" correctly signals "up but refusing some/all traffic". A
         # disconnect-degraded stays degraded (not worse).
-        if status in ("starting", "healthy") and self._breakers.first_open() is not None:
+        if (
+            status in ("starting", "healthy")
+            and self._breakers.first_open() is not None
+        ):
             status = "degraded"
 
         # Current-state summary, distinct from the historical/latching last_error.
@@ -283,7 +288,12 @@ class APIServer:
 
         if not b64_image:
             return web.json_response(
-                {"error": {"message": "Missing 'image' field (base64)", "type": "invalid_request_error"}},
+                {
+                    "error": {
+                        "message": "Missing 'image' field (base64)",
+                        "type": "invalid_request_error",
+                    }
+                },
                 status=400,
             )
 
@@ -291,18 +301,25 @@ class APIServer:
             upload = await self._driver.api_upload_image(b64_image, mime_type=mime_type)
             if not upload.get("success"):
                 return web.json_response(
-                    {"error": {"message": f"Upload failed: {upload.get('error')}", "type": "server_error"}},
+                    {
+                        "error": {
+                            "message": f"Upload failed: {upload.get('error')}",
+                            "type": "server_error",
+                        }
+                    },
                     status=500,
                 )
 
             text = await self._driver.api_send_vision_chat(
                 prompt, upload["file_id"], upload["size"]
             )
-            return web.json_response({
-                "object": "chatgpt.vision",
-                "file_id": upload["file_id"],
-                "response": text,
-            })
+            return web.json_response(
+                {
+                    "object": "chatgpt.vision",
+                    "file_id": upload["file_id"],
+                    "response": text,
+                }
+            )
         except Exception as e:
             logger.error("Vision request failed: %s", e)
             return web.json_response(
@@ -330,16 +347,23 @@ class APIServer:
 
         if not prompt:
             return web.json_response(
-                {"error": {"message": "Missing 'prompt' field", "type": "invalid_request_error"}},
+                {
+                    "error": {
+                        "message": "Missing 'prompt' field",
+                        "type": "invalid_request_error",
+                    }
+                },
                 status=400,
             )
 
         try:
             report = await self._driver.api_deep_research(prompt, model=model)
-            return web.json_response({
-                "object": "chatgpt.research",
-                "report": report,
-            })
+            return web.json_response(
+                {
+                    "object": "chatgpt.research",
+                    "report": report,
+                }
+            )
         except Exception as e:
             logger.error("Deep Research failed: %s", e)
             return web.json_response(
@@ -357,7 +381,12 @@ class APIServer:
             if url:
                 return web.json_response({"download_url": url})
             return web.json_response(
-                {"error": {"message": "File not found or download unavailable", "type": "not_found"}},
+                {
+                    "error": {
+                        "message": "File not found or download unavailable",
+                        "type": "not_found",
+                    }
+                },
                 status=404,
             )
         except Exception as e:
@@ -371,43 +400,47 @@ class APIServer:
         """POST /v1/images/edits"""
         if err := self._check_auth(request):
             return err
-            
+
         # We need to parse multipart/form-data for OpenAI compat
         try:
             reader = await request.multipart()
             prompt = "Edit the image"
             images = []
-            
+
             async for field in reader:
                 if field.name == "prompt":
                     prompt = await field.read(decode=True)
-                    prompt = prompt.decode('utf-8')
+                    prompt = prompt.decode("utf-8")
                 elif field.name in ("image", "mask"):
                     data = await field.read()
                     import base64
+
                     b64 = base64.b64encode(data).decode()
                     mime_type = field.headers.get("Content-Type", "image/png")
-                    
-                    upload = await self._driver.api_upload_image(b64, mime_type=mime_type)
+
+                    upload = await self._driver.api_upload_image(
+                        b64, mime_type=mime_type
+                    )
                     if upload.get("success"):
-                        images.append({"file_id": upload["file_id"], "size": upload["size"]})
-                        
+                        images.append(
+                            {"file_id": upload["file_id"], "size": upload["size"]}
+                        )
+
             if not images:
-                return web.json_response({"error": {"message": "No image provided"}}, status=400)
-                
+                return web.json_response(
+                    {"error": {"message": "No image provided"}}, status=400
+                )
+
             assets = await self._driver.api_image_edit(prompt, images)
-            
+
             result = []
             for asset in assets:
                 url = await self._driver.api_download_file(asset)
                 if url:
                     result.append({"url": url})
-                    
-            return web.json_response({
-                "created": int(time.time()),
-                "data": result
-            })
-            
+
+            return web.json_response({"created": int(time.time()), "data": result})
+
         except Exception as e:
             logger.error("Image edit failed: %s", e)
             return web.json_response({"error": {"message": str(e)}}, status=500)
@@ -429,7 +462,12 @@ class APIServer:
         messages = body.get("messages", [])
         if not messages:
             return web.json_response(
-                {"error": {"message": "No messages provided", "type": "invalid_request_error"}},
+                {
+                    "error": {
+                        "message": "No messages provided",
+                        "type": "invalid_request_error",
+                    }
+                },
                 status=400,
             )
 
@@ -455,7 +493,8 @@ class APIServer:
             content = msg.get("content", "")
             if isinstance(content, list):
                 content = "\n".join(
-                    p.get("text", "") if isinstance(p, dict) else str(p) for p in content
+                    p.get("text", "") if isinstance(p, dict) else str(p)
+                    for p in content
                 )
             else:
                 content = str(content)
@@ -475,7 +514,12 @@ class APIServer:
         # Verify at least one user message exists
         if user_msg_count == 0:
             return web.json_response(
-                {"error": {"message": "No user message", "type": "invalid_request_error"}},
+                {
+                    "error": {
+                        "message": "No user message",
+                        "type": "invalid_request_error",
+                    }
+                },
                 status=400,
             )
 
@@ -570,9 +614,13 @@ class APIServer:
                     self._last_project_id = project_id
 
                 if stream:
-                    return await self._stream_response(request, model_slug, full_text, timeout)
+                    return await self._stream_response(
+                        request, model_slug, full_text, timeout
+                    )
                 else:
-                    return await self._full_response(request, model_slug, full_text, timeout)
+                    return await self._full_response(
+                        request, model_slug, full_text, timeout
+                    )
 
         except Exception as e:
             logger.error("Chat error: %s", e, exc_info=True)
@@ -720,7 +768,10 @@ class APIServer:
         async def _send_and_collect() -> str:
             collected = ""
             async for chunk in self._driver.send_and_stream(
-                text, timeout=timeout, budgets=budgets, model=model,
+                text,
+                timeout=timeout,
+                budgets=budgets,
+                model=model,
             ):
                 collected += chunk.delta
             return collected
@@ -745,7 +796,11 @@ class APIServer:
                         "finish_reason": "stop",
                     }
                 ],
-                "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                "usage": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                },
             }
         )
 
@@ -831,7 +886,10 @@ class APIServer:
 
         try:
             async for chunk in self._driver.send_and_stream(
-                text, timeout=timeout, budgets=budgets, model=model,
+                text,
+                timeout=timeout,
+                budgets=budgets,
+                model=model,
             ):
                 if chunk.delta:
                     await self._send_sse(
@@ -864,7 +922,11 @@ class APIServer:
                             "model": model,
                             "conversation_id": conv_id,
                             "choices": [
-                                {"index": 0, "delta": {}, "finish_reason": chunk.finish_reason}
+                                {
+                                    "index": 0,
+                                    "delta": {},
+                                    "finish_reason": chunk.finish_reason,
+                                }
                             ],
                         },
                     )
@@ -905,7 +967,9 @@ class APIServer:
                     "choices": [
                         {
                             "index": 0,
-                            "delta": {"content": "\n\n[Error: auth_expired — re-login required]"},
+                            "delta": {
+                                "content": "\n\n[Error: auth_expired — re-login required]"
+                            },
                             "finish_reason": "error",
                         }
                     ],

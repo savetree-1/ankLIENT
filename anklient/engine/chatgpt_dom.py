@@ -73,7 +73,9 @@ logger = logging.getLogger(__name__)
 # is kept as a last-resort so the driver still works if ChatGPT rolls
 # the composer back (or on an A/B holdout that hasn't shipped the new
 # UI). Both are tried in preference order by the helpers below.
-COMPOSER_SELECTOR = 'div[role="textbox"]#prompt-textarea, div[role="textbox"].ProseMirror'
+COMPOSER_SELECTOR = (
+    'div[role="textbox"]#prompt-textarea, div[role="textbox"].ProseMirror'
+)
 COMPOSER_FALLBACK_SELECTOR = "textarea#prompt-textarea"
 
 # The send button. The new composer has no data-testid="send-button" —
@@ -266,7 +268,9 @@ class ChatGPTDom:
         # retry once: clear via execCommand('selectAll') + delete (ProseMirror
         # sees editor-like input events), re-insert, re-verify. Only then raise.
         verify_selector = (
-            COMPOSER_SELECTOR if focused_target == "composer" else COMPOSER_FALLBACK_SELECTOR
+            COMPOSER_SELECTOR
+            if focused_target == "composer"
+            else COMPOSER_FALLBACK_SELECTOR
         )
         if not await d._verify_composer_text(verify_selector, text):
             logger.warning(
@@ -412,8 +416,14 @@ class ChatGPTDom:
         # NFC normalization: handles composed/decomposed Unicode sequences
         # (e.g., é as 'e'+U+0301 vs U+00E9). The turn-anchor matcher already
         # uses NFC; this brings the verifier to parity.
-        canon_actual = unicodedata.normalize("NFC", actual.replace("\r\n", "\n").replace("\r", "\n").replace("\u00a0", " "))
-        canon_expected = unicodedata.normalize("NFC", expected.replace("\r\n", "\n").replace("\r", "\n").replace("\u00a0", " "))
+        canon_actual = unicodedata.normalize(
+            "NFC",
+            actual.replace("\r\n", "\n").replace("\r", "\n").replace("\u00a0", " "),
+        )
+        canon_expected = unicodedata.normalize(
+            "NFC",
+            expected.replace("\r\n", "\n").replace("\r", "\n").replace("\u00a0", " "),
+        )
         # ProseMirror wraps input in a <p> and may append a trailing block
         # newline. Tolerate AT MOST ONE editor-added trailing newline — but
         # never strip a user-intended trailing newline. So accept an exact
@@ -517,7 +527,9 @@ class ChatGPTDom:
         )
         try:
             click_raw = await d._js_strict(click_js, timeout=10)
-            clicked = json.loads(click_raw).get("clicked", False) if click_raw else False
+            clicked = (
+                json.loads(click_raw).get("clicked", False) if click_raw else False
+            )
         except Exception:  # best-effort: never raise
             logger.warning("dismiss_rate_limit: click failed", exc_info=True)
             return None  # unknown — don't trigger retry storm
@@ -565,10 +577,12 @@ class ChatGPTDom:
             snapshot = await d._js_strict(
                 "(function(){"
                 "  var composer = document.querySelector('" + COMPOSER_SELECTOR + "')"
-                "       || document.querySelector('" + COMPOSER_FALLBACK_SELECTOR + "');"
-                "  var sendCandidates = document.querySelectorAll('button[type=\"submit\"], button[aria-label*=\"Send\" i], button[data-testid=\"send-button\"]');"
+                "       || document.querySelector('"
+                + COMPOSER_FALLBACK_SELECTOR
+                + "');"
+                '  var sendCandidates = document.querySelectorAll(\'button[type="submit"], button[aria-label*="Send" i], button[data-testid="send-button"]\');'
                 "  var enabledSend = Array.prototype.filter.call(sendCandidates, function(b){ return !b.disabled; });"
-                "  var stopBtn = document.querySelector('[data-testid=\"stop-button\"], button[aria-label*=\"Stop\" i]');"
+                '  var stopBtn = document.querySelector(\'[data-testid="stop-button"], button[aria-label*="Stop" i]\');'
                 "  return JSON.stringify({"
                 "    url: location.href,"
                 "    title: document.title,"
@@ -581,11 +595,15 @@ class ChatGPTDom:
                 "    send_candidates_count: sendCandidates.length,"
                 "    enabled_send_candidates_count: enabledSend.length,"
                 "    stop_button_present: !!stopBtn,"
-                "    generating_indicator_present: !!document.querySelector('[class*=\"result-thinking\"], [class*=\"generating\"]')"
+                '    generating_indicator_present: !!document.querySelector(\'[class*="result-thinking"], [class*="generating"]\')'
                 "  });"
                 "})()",
                 timeout=5,
             )
-            logger.warning("Selector drift diagnostic (%s): %s", selector_name, snapshot)
+            logger.warning(
+                "Selector drift diagnostic (%s): %s", selector_name, snapshot
+            )
         except Exception:
-            logger.warning("Selector drift diagnostic (%s): capture failed", selector_name)
+            logger.warning(
+                "Selector drift diagnostic (%s): capture failed", selector_name
+            )

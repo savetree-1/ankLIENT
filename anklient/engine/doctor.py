@@ -64,17 +64,21 @@ def print_evidence(artifact_path: Path) -> None:
     print(json.dumps(data.get("expected", {}), indent=2, default=str))
     print("\n--- ACTUAL ---")
     print(json.dumps(data.get("actual", {}), indent=2, default=str)[:2000])
-    print("\nNext: an AI agent reads the above and proposes a corrected "
-          "payload/selector/parse. Run `doctor --verify <function>` to test it.")
+    print(
+        "\nNext: an AI agent reads the above and proposes a corrected "
+        "payload/selector/parse. Run `doctor --verify <function>` to test it."
+    )
 
 
 def run_doctor(args) -> None:
     """Entry point for the `doctor` subcommand."""
     from .diagnostics import _DIAG_DIR
+
     base = _DIAG_DIR.base
 
     if getattr(args, "verify", None):
         from .doctor_verify import run_verify_cli
+
         run_verify_cli(args.verify)
         return
 
@@ -84,19 +88,25 @@ def run_doctor(args) -> None:
     if not function:
         fns = list_broken_functions(base)
         if not fns:
-            print("No diagnostic artifacts found. To capture breakage, run the "
-                  "server with W2A_DIAGNOSE=1 and trigger the failing function.")
+            print(
+                "No diagnostic artifacts found. To capture breakage, run the "
+                "server with W2A_DIAGNOSE=1 and trigger the failing function."
+            )
             return
         print(f"Discovered {len(fns)} function(s) with captured breakage:")
         for fn in fns:
             print(f"  {fn}")
-        print("\nRun `doctor <function>` to see the evidence, or "
-              "`doctor --verify <function>` to re-test a fix.")
+        print(
+            "\nRun `doctor <function>` to see the evidence, or "
+            "`doctor --verify <function>` to re-test a fix."
+        )
         return
 
     latest = latest_artifact_for(base, function)
     if latest is None:
-        print(f"No artifact for '{function}'. Capture one by enabling "
-              "W2A_DIAGNOSE=1 and triggering the breakage.")
+        print(
+            f"No artifact for '{function}'. Capture one by enabling "
+            "W2A_DIAGNOSE=1 and triggering the breakage."
+        )
         return
     print_evidence(latest)

@@ -8,15 +8,20 @@ from .message import ChatResponse, TimingMetrics
 
 class APIClient:
     """Client that talks to the local ankLIENT Daemon (which hosts the ankLIENT Engine API server)."""
-    
-    def __init__(self, base_url: str = "http://127.0.0.1:8080/v1", api_key: str = "sk-local"):
-        self.client = OpenAI(base_url=base_url, api_key=api_key)
 
+    def __init__(
+        self, base_url: str = "http://127.0.0.1:8080/v1", api_key: str = "sk-local"
+    ):
+        self.client = OpenAI(base_url=base_url, api_key=api_key)
 
     def get_memories(self) -> list[dict]:
         import json
         import urllib.request
-        req = urllib.request.Request(f"{self.client.base_url}/memories", headers={"Authorization": f"Bearer {self.client.api_key}"})
+
+        req = urllib.request.Request(
+            f"{self.client.base_url}/memories",
+            headers={"Authorization": f"Bearer {self.client.api_key}"},
+        )
         try:
             with urllib.request.urlopen(req) as response:
                 data = json.loads(response.read().decode())
@@ -27,7 +32,11 @@ class APIClient:
     def get_projects(self) -> list[dict]:
         import json
         import urllib.request
-        req = urllib.request.Request(f"{self.client.base_url}/projects", headers={"Authorization": f"Bearer {self.client.api_key}"})
+
+        req = urllib.request.Request(
+            f"{self.client.base_url}/projects",
+            headers={"Authorization": f"Bearer {self.client.api_key}"},
+        )
         try:
             with urllib.request.urlopen(req) as response:
                 data = json.loads(response.read().decode())
@@ -39,6 +48,7 @@ class APIClient:
         """Fetch account usage limits from the daemon."""
         import json
         import urllib.request
+
         req = urllib.request.Request(
             f"{self.client.base_url}/chatgpt/usage",
             headers={"Authorization": f"Bearer {self.client.api_key}"},
@@ -49,11 +59,16 @@ class APIClient:
         except Exception as e:
             raise RuntimeError(f"Failed to fetch usage: {e}")
 
-    def send_vision(self, b64_image: str, prompt: str, mime_type: str = "image/png") -> str:
+    def send_vision(
+        self, b64_image: str, prompt: str, mime_type: str = "image/png"
+    ) -> str:
         """Upload an image and ask ChatGPT about it."""
         import json
         import urllib.request
-        body = json.dumps({"image": b64_image, "prompt": prompt, "mime_type": mime_type}).encode()
+
+        body = json.dumps(
+            {"image": b64_image, "prompt": prompt, "mime_type": mime_type}
+        ).encode()
         req = urllib.request.Request(
             f"{self.client.base_url}/chatgpt/vision",
             data=body,
@@ -74,6 +89,7 @@ class APIClient:
         """Run a Deep Research query and return the report."""
         import json
         import urllib.request
+
         body = json.dumps({"prompt": prompt, "model": model}).encode()
         req = urllib.request.Request(
             f"{self.client.base_url}/chatgpt/research",
@@ -95,6 +111,7 @@ class APIClient:
         """Get a temporary download URL for a ChatGPT file."""
         import json
         import urllib.request
+
         req = urllib.request.Request(
             f"{self.client.base_url}/chatgpt/files/{file_id}/download",
             headers={"Authorization": f"Bearer {self.client.api_key}"},
@@ -106,9 +123,14 @@ class APIClient:
         except Exception:
             return None
 
-    def send_message(self, prompt: str, on_status: Callable[[str], None] | None = None, on_stream: Callable[[str], None] | None = None) -> ChatResponse:
+    def send_message(
+        self,
+        prompt: str,
+        on_status: Callable[[str], None] | None = None,
+        on_stream: Callable[[str], None] | None = None,
+    ) -> ChatResponse:
         send_start = time.perf_counter()
-        
+
         if on_status:
             on_status("Sending...")
 
@@ -130,26 +152,28 @@ class APIClient:
                         first_response_at = time.perf_counter()
                         if on_status:
                             on_status("Receiving response...")
-                            
+
                     text = chunk.choices[0].delta.content
                     full_content += text
                     if on_stream:
                         on_stream(full_content)
 
             finished_at = time.perf_counter()
-            
+
             if on_status:
                 on_status("Complete")
 
             ttft_ms = (first_response_at - send_start) * 1000 if first_text else 0
             total_ms = (finished_at - send_start) * 1000
-            
+
             return ChatResponse(
                 content=full_content,
                 timing=TimingMetrics(ttft_ms=ttft_ms, total_ms=total_ms),
                 word_count=len(full_content.split()),
                 char_count=len(full_content),
-                saved_images=[]
+                saved_images=[],
             )
         except Exception as e:
-            raise RuntimeError(f"Daemon API Error: {e}. Is the ankLIENT Daemon running?")
+            raise RuntimeError(
+                f"Daemon API Error: {e}. Is the ankLIENT Daemon running?"
+            )

@@ -177,6 +177,7 @@ class CrossProcessLock:
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         if self._fh is not None:
             fh, self._fh = self._fh, None
+
             # Release off-thread only if it could block; portalocker.unlock +
             # close are fast on all platforms, but keep the off-thread shape
             # to guarantee the event loop is never wedged by a slow release.

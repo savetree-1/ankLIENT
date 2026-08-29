@@ -123,10 +123,8 @@ class ListModelsInput(BaseModel):
     """No inputs needed — empty schema."""
 
 
-
 class ListProjectsInput(BaseModel):
     """No inputs needed — empty schema."""
-
 
 
 class GetConversationInput(BaseModel):
@@ -183,7 +181,9 @@ class CreateProjectInput(BaseModel):
     """Input for creating a new ChatGPT project."""
 
     name: str = Field(
-        description=("Display name for the project. This name appears in the ChatGPT sidebar."),
+        description=(
+            "Display name for the project. This name appears in the ChatGPT sidebar."
+        ),
     )
     instructions: str = Field(
         default="",
@@ -234,7 +234,6 @@ class ListMemoriesInput(BaseModel):
     """No inputs needed."""
 
 
-
 class CreateMemoryInput(BaseModel):
     """Input for creating a new ChatGPT memory."""
 
@@ -261,7 +260,6 @@ class DeleteProjectInput(BaseModel):
 
 class ListGptsInput(BaseModel):
     """No inputs needed."""
-
 
 
 class ListProjectFilesInput(BaseModel):
@@ -333,7 +331,10 @@ CHAT_COMPLETION_OUTPUT = {
 MODEL_ITEM = {
     "type": "object",
     "properties": {
-        "id": {"type": "string", "description": "Model slug for use in chat_completion"},
+        "id": {
+            "type": "string",
+            "description": "Model slug for use in chat_completion",
+        },
         "title": {"type": "string", "description": "Human-readable model name"},
     },
     "required": ["id", "title"],
@@ -732,13 +733,13 @@ async def do_chat_completion(
 ) -> dict:
     """Execute a chat completion through the CDP driver."""
     validated = ChatCompletionInput(**args)
-    project_id = validated.project_id or (config.chatgpt.default_project_id if config else None)
+    project_id = validated.project_id or (
+        config.chatgpt.default_project_id if config else None
+    )
 
     # Build the full text with optional system prompt
     if validated.system_prompt:
-        full_text = (
-            f"[System Instructions]\n{validated.system_prompt}\n\n[User]\n{validated.message}"
-        )
+        full_text = f"[System Instructions]\n{validated.system_prompt}\n\n[User]\n{validated.message}"
     else:
         full_text = validated.message
 
@@ -784,7 +785,10 @@ async def do_chat_completion(
         else None
     )
     async for chunk in driver.send_and_stream(
-        full_text, timeout=120, budgets=_budgets, model=validated.model,
+        full_text,
+        timeout=120,
+        budgets=_budgets,
+        model=validated.model,
     ):
         if chunk.delta:
             full_response += chunk.delta
@@ -808,7 +812,9 @@ async def do_list_models(driver: CDPDriver) -> dict:
     """List available models."""
     models = await driver.get_models()
     return {
-        "models": [{"id": m.get("slug", ""), "title": m.get("title", "")} for m in models],
+        "models": [
+            {"id": m.get("slug", ""), "title": m.get("title", "")} for m in models
+        ],
     }
 
 
@@ -1427,13 +1433,15 @@ def build_tools() -> list[mcp_types.Tool]:
 # Extracted from the singleton call_tool path so the pooled path reuses
 # exactly the same result shaping and error semantics. (PR #42 review fix #1/#2)
 
-_STATUS_TOOLS = frozenset({
-    ToolName.DELETE_CONVERSATION.value,
-    ToolName.UPDATE_PROJECT_INSTRUCTIONS.value,
-    ToolName.DELETE_PROJECT.value,
-    ToolName.ARCHIVE_CONVERSATION.value,
-    ToolName.DELETE_MEMORY.value,
-})
+_STATUS_TOOLS = frozenset(
+    {
+        ToolName.DELETE_CONVERSATION.value,
+        ToolName.UPDATE_PROJECT_INSTRUCTIONS.value,
+        ToolName.DELETE_PROJECT.value,
+        ToolName.ARCHIVE_CONVERSATION.value,
+        ToolName.DELETE_MEMORY.value,
+    }
+)
 
 
 def _format_tool_result(name: str, result) -> object:
@@ -1465,41 +1473,70 @@ def _map_tool_exception(exc: Exception) -> object:
 
     if isinstance(exc, OwnedTabRequiredError):
         return mcp_types.CallToolResult(
-            content=[mcp_types.TextContent(type="text",
-                text=f"{exc}. Retry later. (owned_tab_required)")],
+            content=[
+                mcp_types.TextContent(
+                    type="text", text=f"{exc}. Retry later. (owned_tab_required)"
+                )
+            ],
             isError=True,
         )
     if isinstance(exc, RateLimitError):
         return mcp_types.CallToolResult(
-            content=[mcp_types.TextContent(type="text",
-                text=(f"ChatGPT rate limit reached. Retry in {exc.retry_after}s. "
-                      f"(rate_limit_exceeded, retry_after={exc.retry_after})"))],
+            content=[
+                mcp_types.TextContent(
+                    type="text",
+                    text=(
+                        f"ChatGPT rate limit reached. Retry in {exc.retry_after}s. "
+                        f"(rate_limit_exceeded, retry_after={exc.retry_after})"
+                    ),
+                )
+            ],
             isError=True,
         )
     if isinstance(exc, CircuitOpenError):
         return mcp_types.CallToolResult(
-            content=[mcp_types.TextContent(type="text",
-                text=(f"Circuit open for {exc.kind.value} — cooling down. "
-                      f"Retry later. (circuit_open, kind={exc.kind.value})"))],
+            content=[
+                mcp_types.TextContent(
+                    type="text",
+                    text=(
+                        f"Circuit open for {exc.kind.value} — cooling down. "
+                        f"Retry later. (circuit_open, kind={exc.kind.value})"
+                    ),
+                )
+            ],
             isError=True,
         )
     if isinstance(exc, AuthExpiredError):
         return mcp_types.CallToolResult(
-            content=[mcp_types.TextContent(type="text",
-                text="ChatGPT session expired — re-login required. (auth_expired)")],
+            content=[
+                mcp_types.TextContent(
+                    type="text",
+                    text="ChatGPT session expired — re-login required. (auth_expired)",
+                )
+            ],
             isError=True,
         )
     if isinstance(exc, GenerationStuckError):
         return mcp_types.CallToolResult(
-            content=[mcp_types.TextContent(type="text",
-                text=(f"Generation stuck in {exc.phase} for {exc.stalled_for_s:.0f}s "
-                      "— no DOM progress. (generation_stuck)"))],
+            content=[
+                mcp_types.TextContent(
+                    type="text",
+                    text=(
+                        f"Generation stuck in {exc.phase} for {exc.stalled_for_s:.0f}s "
+                        "— no DOM progress. (generation_stuck)"
+                    ),
+                )
+            ],
             isError=True,
         )
     if isinstance(exc, LockAcquisitionError):
         return mcp_types.CallToolResult(
-            content=[mcp_types.TextContent(type="text",
-                text="Browser busy — another operation in progress. Retry later. (lock_timeout)")],
+            content=[
+                mcp_types.TextContent(
+                    type="text",
+                    text="Browser busy — another operation in progress. Retry later. (lock_timeout)",
+                )
+            ],
             isError=True,
         )
     return None
@@ -1581,45 +1618,56 @@ def create_server() -> Server:
         # Defense-in-depth: gated tool check (same as singleton path).
         gate = _tool_gate_env(name)
         if gate is not None and not _env_enabled(gate):
-            raise PermissionError(f"Tool '{name}' is not enabled. Set {gate}=1 to expose it.")
+            raise PermissionError(
+                f"Tool '{name}' is not enabled. Set {gate}=1 to expose it."
+            )
 
         # Account throttle breaker: block mutations pool-wide.
         is_mutation = name in _MUTATING_TOOLS
         if is_mutation and _driver_pool.account_breaker.is_tripped():
             return mcp_types.CallToolResult(
-                content=[mcp_types.TextContent(
-                    type="text",
-                    text="ChatGPT account throttle detected; mutating requests are paused "
-                         "pool-wide until cooldown elapses. (mcp_account_throttled)",
-                )],
+                content=[
+                    mcp_types.TextContent(
+                        type="text",
+                        text="ChatGPT account throttle detected; mutating requests are paused "
+                        "pool-wide until cooldown elapses. (mcp_account_throttled)",
+                    )
+                ],
                 isError=True,
             )
 
         # Resolve session key (fail-closed for pool-enabled SSE with no session_id).
         session_key = current_mcp_session_key(
-            srv, transport=_transport,
+            srv,
+            transport=_transport,
             pool_enabled=True,
         )
-        logger.info("_call_tool_pooled session_key=%s transport=%s", session_key, _transport)
+        logger.info(
+            "_call_tool_pooled session_key=%s transport=%s", session_key, _transport
+        )
         # Fix: transport should come from the actual transport, not inferred from pool.
         # But we don't have the transport in scope here — use the global _transport.
         # For now, use a simpler approach: always try SSE first, fall back.
         if session_key is None:
             return mcp_types.CallToolResult(
-                content=[mcp_types.TextContent(
-                    type="text",
-                    text="MCP session identity unavailable; cannot allocate session-affine tab. "
-                         "(mcp_session_identity_unavailable)",
-                )],
+                content=[
+                    mcp_types.TextContent(
+                        type="text",
+                        text="MCP session identity unavailable; cannot allocate session-affine tab. "
+                        "(mcp_session_identity_unavailable)",
+                    )
+                ],
                 isError=True,
             )
 
         on_progress = _make_progress_callback()
-        _CHAT_TOOLS = frozenset({
-            ToolName.CHAT_COMPLETION.value,
-            ToolName.CHAT_WITH_GPT.value,
-            ToolName.CREATE_MEMORY.value,
-        })
+        _CHAT_TOOLS = frozenset(
+            {
+                ToolName.CHAT_COMPLETION.value,
+                ToolName.CHAT_WITH_GPT.value,
+                ToolName.CREATE_MEMORY.value,
+            }
+        )
 
         try:
             logger.info("pool.acquire entered: session_key=%s", session_key)
@@ -1645,7 +1693,9 @@ def create_server() -> Server:
 
                     async def _run_pooled() -> dict:
                         if name in _CHAT_TOOLS:
-                            return await retry_on_rate_limit(driver, handler, on_progress=on_progress)
+                            return await retry_on_rate_limit(
+                                driver, handler, on_progress=on_progress
+                            )
                         return await handler()
 
                     if is_mutation and _lock_cdp_port is not None:
@@ -1677,7 +1727,9 @@ def create_server() -> Server:
             # default message, but this guards against future bare raises.)
             detail = str(e) or type(e).__name__
             return mcp_types.CallToolResult(
-                content=[mcp_types.TextContent(type="text", text=f"{detail}. Retry later.")],
+                content=[
+                    mcp_types.TextContent(type="text", text=f"{detail}. Retry later.")
+                ],
                 isError=True,
             )
         except Exception as exc:
@@ -1690,22 +1742,40 @@ def create_server() -> Server:
     def _build_tool_handler(name, arguments, driver, on_progress):
         """Build a tool handler bound to a specific driver (singleton or leased)."""
         handlers = {
-            ToolName.CHAT_COMPLETION.value: lambda: do_chat_completion(driver, arguments, _config, on_progress),
+            ToolName.CHAT_COMPLETION.value: lambda: do_chat_completion(
+                driver, arguments, _config, on_progress
+            ),
             ToolName.LIST_MODELS.value: lambda: do_list_models(driver),
             ToolName.LIST_PROJECTS.value: lambda: do_list_projects(driver),
-            ToolName.GET_CONVERSATION.value: lambda: do_get_conversation(driver, arguments),
-            ToolName.LIST_CONVERSATIONS.value: lambda: do_list_conversations(driver, arguments),
-            ToolName.DELETE_CONVERSATION.value: lambda: do_delete_conversation(driver, arguments),
+            ToolName.GET_CONVERSATION.value: lambda: do_get_conversation(
+                driver, arguments
+            ),
+            ToolName.LIST_CONVERSATIONS.value: lambda: do_list_conversations(
+                driver, arguments
+            ),
+            ToolName.DELETE_CONVERSATION.value: lambda: do_delete_conversation(
+                driver, arguments
+            ),
             ToolName.CREATE_PROJECT.value: lambda: do_create_project(driver, arguments),
             ToolName.DELETE_PROJECT.value: lambda: do_delete_project(driver, arguments),
-            ToolName.UPDATE_PROJECT_INSTRUCTIONS.value: lambda: do_update_project_instructions(driver, arguments),
-            ToolName.ARCHIVE_CONVERSATION.value: lambda: do_archive_conversation(driver, arguments),
+            ToolName.UPDATE_PROJECT_INSTRUCTIONS.value: lambda: (
+                do_update_project_instructions(driver, arguments)
+            ),
+            ToolName.ARCHIVE_CONVERSATION.value: lambda: do_archive_conversation(
+                driver, arguments
+            ),
             ToolName.LIST_MEMORIES.value: lambda: do_list_memories(driver),
-            ToolName.CREATE_MEMORY.value: lambda: do_create_memory(driver, arguments, on_progress),
+            ToolName.CREATE_MEMORY.value: lambda: do_create_memory(
+                driver, arguments, on_progress
+            ),
             ToolName.DELETE_MEMORY.value: lambda: do_delete_memory(driver, arguments),
             ToolName.LIST_GPTS.value: lambda: do_list_gpts(driver),
-            ToolName.CHAT_WITH_GPT.value: lambda: do_chat_with_gpt(driver, arguments, on_progress),
-            ToolName.LIST_PROJECT_FILES.value: lambda: do_list_project_files(driver, arguments),
+            ToolName.CHAT_WITH_GPT.value: lambda: do_chat_with_gpt(
+                driver, arguments, on_progress
+            ),
+            ToolName.LIST_PROJECT_FILES.value: lambda: do_list_project_files(
+                driver, arguments
+            ),
         }
         return handlers.get(name)
 
@@ -1724,7 +1794,10 @@ def create_server() -> Server:
                         text += item.text
             except TypeError:
                 pass
-        return "excessive consumption" in text.lower() or "too many requests" in text.lower()
+        return (
+            "excessive consumption" in text.lower()
+            or "too many requests" in text.lower()
+        )
 
     @server.call_tool()
     async def call_tool(
@@ -1749,23 +1822,39 @@ def create_server() -> Server:
             ),
             ToolName.LIST_MODELS.value: lambda: do_list_models(_driver),
             ToolName.LIST_PROJECTS.value: lambda: do_list_projects(_driver),
-            ToolName.GET_CONVERSATION.value: lambda: do_get_conversation(_driver, arguments),
-            ToolName.LIST_CONVERSATIONS.value: lambda: do_list_conversations(_driver, arguments),
-            ToolName.DELETE_CONVERSATION.value: lambda: do_delete_conversation(_driver, arguments),
-            ToolName.CREATE_PROJECT.value: lambda: do_create_project(_driver, arguments),
-            ToolName.DELETE_PROJECT.value: lambda: do_delete_project(_driver, arguments),
-            ToolName.UPDATE_PROJECT_INSTRUCTIONS.value: lambda: do_update_project_instructions(
+            ToolName.GET_CONVERSATION.value: lambda: do_get_conversation(
                 _driver, arguments
+            ),
+            ToolName.LIST_CONVERSATIONS.value: lambda: do_list_conversations(
+                _driver, arguments
+            ),
+            ToolName.DELETE_CONVERSATION.value: lambda: do_delete_conversation(
+                _driver, arguments
+            ),
+            ToolName.CREATE_PROJECT.value: lambda: do_create_project(
+                _driver, arguments
+            ),
+            ToolName.DELETE_PROJECT.value: lambda: do_delete_project(
+                _driver, arguments
+            ),
+            ToolName.UPDATE_PROJECT_INSTRUCTIONS.value: lambda: (
+                do_update_project_instructions(_driver, arguments)
             ),
             ToolName.ARCHIVE_CONVERSATION.value: lambda: do_archive_conversation(
                 _driver, arguments
             ),
             ToolName.LIST_MEMORIES.value: lambda: do_list_memories(_driver),
-            ToolName.CREATE_MEMORY.value: lambda: do_create_memory(_driver, arguments, on_progress),
+            ToolName.CREATE_MEMORY.value: lambda: do_create_memory(
+                _driver, arguments, on_progress
+            ),
             ToolName.DELETE_MEMORY.value: lambda: do_delete_memory(_driver, arguments),
             ToolName.LIST_GPTS.value: lambda: do_list_gpts(_driver),
-            ToolName.CHAT_WITH_GPT.value: lambda: do_chat_with_gpt(_driver, arguments, on_progress),
-            ToolName.LIST_PROJECT_FILES.value: lambda: do_list_project_files(_driver, arguments),
+            ToolName.CHAT_WITH_GPT.value: lambda: do_chat_with_gpt(
+                _driver, arguments, on_progress
+            ),
+            ToolName.LIST_PROJECT_FILES.value: lambda: do_list_project_files(
+                _driver, arguments
+            ),
         }
 
         handler = handlers.get(name)
@@ -1777,7 +1866,9 @@ def create_server() -> Server:
         # must be rejected rather than silently executed.
         gate = _tool_gate_env(name)
         if gate is not None and not _env_enabled(gate):
-            raise PermissionError(f"Tool '{name}' is not enabled. Set {gate}=1 to expose it.")
+            raise PermissionError(
+                f"Tool '{name}' is not enabled. Set {gate}=1 to expose it."
+            )
 
         # Tools whose business logic drives ChatGPT chat (and can hit the rate
         # limit). These get transparent retry: a transient "Too many requests"
@@ -1809,7 +1900,9 @@ def create_server() -> Server:
                 # passes into the business function; here it's also used by
                 # retry_on_rate_limit to signal the backoff pause. Same object
                 # by design — two injection points, one notifier.
-                return await retry_on_rate_limit(_driver, handler, on_progress=on_progress)
+                return await retry_on_rate_limit(
+                    _driver, handler, on_progress=on_progress
+                )
             return await handler()
 
         # Serialize mutating tools through the cross-process lock
@@ -1920,7 +2013,9 @@ def create_server() -> Server:
 
         if uri == "chatgpt://models":
             models = await _driver.get_models()
-            data = [{"id": m.get("slug", ""), "title": m.get("title", "")} for m in models]
+            data = [
+                {"id": m.get("slug", ""), "title": m.get("title", "")} for m in models
+            ]
             return json.dumps(data, ensure_ascii=False, indent=2)
 
         elif uri == "chatgpt://account":
@@ -2123,7 +2218,14 @@ def _mcp_server_identity(config: Config, transport: str, port: int) -> str:
 
 async def run_mcp(config: Config, transport: str = "stdio", port: int = 8090) -> None:
     """Connect to Chrome and run the MCP server."""
-    global _driver, _driver_pool, _config, _lock_cdp_port, _breakers, _parallel_tabs, _transport
+    global \
+        _driver, \
+        _driver_pool, \
+        _config, \
+        _lock_cdp_port, \
+        _breakers, \
+        _parallel_tabs, \
+        _transport
 
     _config = config
     _lock_cdp_port = config.chrome.cdp_port
@@ -2138,7 +2240,9 @@ async def run_mcp(config: Config, transport: str = "stdio", port: int = 8090) ->
         _driver = None
         _breakers = None
         _driver_pool = McpSessionDriverPool(
-            config, transport=transport, port=port,
+            config,
+            transport=transport,
+            port=port,
         )
         await _driver_pool.start_sweeper()
         logger.info(
@@ -2213,8 +2317,12 @@ async def _run_sse(server: Server, init_options, config: Config, port: int) -> N
     sse = SseServerTransport("/messages")
 
     async def handle_sse(request):
-        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
-            await server.run(streams[0], streams[1], init_options, raise_exceptions=True)
+        async with sse.connect_sse(
+            request.scope, request.receive, request._send
+        ) as streams:
+            await server.run(
+                streams[0], streams[1], init_options, raise_exceptions=True
+            )
         return Response()
 
     # handle_post_message is a raw ASGI app (scope, receive, send) that
@@ -2257,8 +2365,12 @@ def main() -> None:
         default="stdio",
         help="Transport layer (default: stdio)",
     )
-    parser.add_argument("--port", type=int, default=8090, help="SSE port (default: 8090)")
-    parser.add_argument("--cdp-port", type=int, help="Chrome CDP port (default: from config)")
+    parser.add_argument(
+        "--port", type=int, default=8090, help="SSE port (default: 8090)"
+    )
+    parser.add_argument(
+        "--cdp-port", type=int, help="Chrome CDP port (default: from config)"
+    )
     parser.add_argument(
         "--log-level",
         default="INFO",

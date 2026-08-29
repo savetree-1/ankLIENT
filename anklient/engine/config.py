@@ -38,7 +38,11 @@ def _default_chrome_path() -> str:
         if Path(c).exists():
             return c
     # Fallback — rely on PATH
-    found = shutil.which("chrome") or shutil.which("google-chrome") or shutil.which("chromium")
+    found = (
+        shutil.which("chrome")
+        or shutil.which("google-chrome")
+        or shutil.which("chromium")
+    )
     return found or "chrome"
 
 
@@ -123,6 +127,7 @@ class EnsureConfig:
 
     Narrow on purpose: only the values ensure reads. Breaker thresholds/windows
     stay hardcoded (not configurable here)."""
+
     degraded_poll_interval_s: float = 2.0
     degraded_poll_budget_s: float = 20.0
     breaker_cooldown_grace_s: float = 5.0
@@ -162,6 +167,7 @@ class Config:
         defaults with no error. Auto-discovery is logged so it's never silent.
         """
         import logging
+
         log = logging.getLogger("anklient.config")
         cfg = cls()
         if path and Path(path).exists():
@@ -181,7 +187,9 @@ class Config:
                 except (json.JSONDecodeError, OSError) as e:
                     log.warning("Could not load default config %s: %s", default_path, e)
             else:
-                log.debug("No default config at %s; using built-in defaults", default_path)
+                log.debug(
+                    "No default config at %s; using built-in defaults", default_path
+                )
         cfg._apply_env()
         # Validate AFTER both file + env overlays are applied — env can fix or
         # break what the file set. This is the first real validation in config;
@@ -205,14 +213,13 @@ class Config:
                     "mcp_session_pool_enabled=true requires tab_mode=owned"
                 )
             if cfg.chatgpt.mcp_session_pool_size < 1:
-                raise ValueError(
-                    "mcp_session_pool_size must be >= 1"
-                )
+                raise ValueError("mcp_session_pool_size must be >= 1")
             if cfg.chatgpt.mcp_session_pool_create_concurrency < 1:
-                raise ValueError(
-                    "mcp_session_pool_create_concurrency must be >= 1"
-                )
-            if cfg.chatgpt.mcp_session_pool_create_concurrency > cfg.chatgpt.mcp_session_pool_size:
+                raise ValueError("mcp_session_pool_create_concurrency must be >= 1")
+            if (
+                cfg.chatgpt.mcp_session_pool_create_concurrency
+                > cfg.chatgpt.mcp_session_pool_size
+            ):
                 raise ValueError(
                     "mcp_session_pool_create_concurrency must be <= "
                     "mcp_session_pool_size"

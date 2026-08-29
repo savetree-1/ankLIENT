@@ -6,6 +6,7 @@ class TimingMetrics:
     ttft_ms: float = 0.0
     total_ms: float = 0.0
 
+
 @dataclass
 class ChatResponse:
     content: str

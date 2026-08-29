@@ -27,6 +27,7 @@ synchronously and schedules the heavy POST-body parse via
 ``loop.create_task`` so the reader loop is never blocked on JSON parsing or
 hashing of large request bodies.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -151,7 +152,9 @@ class IdentityListener:
         """
         d = self._driver
         # Register the handler on the driver's dispatch table.
-        d._cdp_event_handlers["Network.requestWillBeSent"] = self._on_request_will_be_sent
+        d._cdp_event_handlers["Network.requestWillBeSent"] = (
+            self._on_request_will_be_sent
+        )
         # Enable the Network domain with POST-body capture.
         try:
             await d._cdp(
@@ -233,7 +236,8 @@ class IdentityListener:
         if self._active_scope is not None and not self._active_scope._closed:
             logger.warning(
                 "identity_listener: arming new scope while previous is active "
-                "(seq=%d); closing stale", self._active_scope.send_sequence_id
+                "(seq=%d); closing stale",
+                self._active_scope.send_sequence_id,
             )
             self._active_scope.close()
         self._active_scope = scope
@@ -256,7 +260,8 @@ class IdentityListener:
             self._record_fallback_reason("capture_timeout")
             logger.info(
                 "identity_capture_missed: timeout after %.1fs (seq=%d)",
-                timeout, scope.send_sequence_id,
+                timeout,
+                scope.send_sequence_id,
             )
             return None
 
@@ -295,7 +300,9 @@ class IdentityListener:
             # Never let handler errors escape into the reader loop.
             logger.exception("identity_listener: handler error in prefilter")
 
-    async def _process_send_post(self, scope: CaptureScope, msg: dict, url: str) -> None:
+    async def _process_send_post(
+        self, scope: CaptureScope, msg: dict, url: str
+    ) -> None:
         """Heavy parse + validation, scheduled off the reader loop.
 
         Validates the POST belongs to this send (failure-mode B), extracts
@@ -340,7 +347,11 @@ class IdentityListener:
                 return
             # conversation_id match if known.
             body_conv_id = parsed.get("conversation_id")
-            if scope.conversation_id and body_conv_id and body_conv_id != scope.conversation_id:
+            if (
+                scope.conversation_id
+                and body_conv_id
+                and body_conv_id != scope.conversation_id
+            ):
                 # Different conversation — not our send.
                 return
             # text-hash match if available (failure-mode D: multiple POSTs).
@@ -354,21 +365,25 @@ class IdentityListener:
                     logger.debug(
                         "identity_capture: text hash mismatch (expected %s, got %s) — "
                         "not our send, leaving scope open",
-                        scope.expected_text_hash[:12], body_hash[:12],
+                        scope.expected_text_hash[:12],
+                        body_hash[:12],
                     )
                     return
 
             # Success — resolve the scope.
             self.capture_success_count += 1
-            scope._resolve(CaptureResult(
-                uuid=uuid,
-                reason="matched",
-                candidate_count=1,
-                request_id=request_id,
-            ))
+            scope._resolve(
+                CaptureResult(
+                    uuid=uuid,
+                    reason="matched",
+                    candidate_count=1,
+                    request_id=request_id,
+                )
+            )
             logger.info(
                 "identity_capture_success: uuid=%s seq=%d",
-                uuid, scope.send_sequence_id,
+                uuid,
+                scope.send_sequence_id,
             )
         except Exception:
             logger.exception("identity_listener: error processing send POST")

@@ -198,7 +198,9 @@ class ChromeProcess:
     def get_page_targets(self) -> list[dict]:
         """Get all page targets from CDP."""
         try:
-            req = urllib.request.Request(f"http://127.0.0.1:{self._cfg.cdp_port}/json/list")
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{self._cfg.cdp_port}/json/list"
+            )
             with urllib.request.urlopen(req, timeout=5) as resp:
                 return json.loads(resp.read())
         except Exception:
@@ -245,7 +247,9 @@ class ChromeProcess:
             args,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            if sys.platform == "win32"
+            else 0,
         )
         self._started_at = time.monotonic()
         logger.info("Chrome PID: %d", self._process.pid)
@@ -282,7 +286,9 @@ class ChromeProcess:
     async def _cdp_alive(self) -> bool:
         """Check if CDP is responding."""
         try:
-            req = urllib.request.Request(f"http://127.0.0.1:{self._cfg.cdp_port}/json/version")
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{self._cfg.cdp_port}/json/version"
+            )
             with urllib.request.urlopen(req, timeout=3) as resp:
                 return resp.status == 200
         except Exception:
@@ -333,9 +339,7 @@ class ChromeProcess:
                 if self._breakers and self._breakers.is_open(
                     BreakerKind.CHROME_CRASH_LOOP
                 ):
-                    logger.error(
-                        "Chrome crash-loop breaker open; suppressing restart"
-                    )
+                    logger.error("Chrome crash-loop breaker open; suppressing restart")
                     continue
                 logger.warning(
                     "Chrome died — restarting (attempt #%d)...", self._restart_count + 1

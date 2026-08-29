@@ -8,8 +8,9 @@ def create_request_panel(prompt: str) -> Panel:
         title="REQUEST",
         title_align="left",
         border_style="request.border",
-        padding=(1, 2)
+        padding=(1, 2),
     )
+
 
 def create_response_panel(response: str) -> Panel:
     return Panel(
@@ -17,5 +18,5 @@ def create_response_panel(response: str) -> Panel:
         title="RESPONSE",
         title_align="left",
         border_style="response.border",
-        padding=(1, 2)
+        padding=(1, 2),
     )

@@ -94,12 +94,17 @@ async def retry_on_rate_limit(
             try:
                 dismissed = await driver.dismiss_rate_limit()
             except Exception:  # best-effort
-                dismissed = None  # unknown — see dismiss_rate_limit's tri-state contract
+                dismissed = (
+                    None  # unknown — see dismiss_rate_limit's tri-state contract
+                )
             wait = min(e.retry_after or backoff, cap)
             wait = wait + random.uniform(0, min(wait, 1.0))  # jitter
             logger.info(
                 "Rate limit on attempt %d/%d (dismissed=%s); backing off %.1fs",
-                attempt, max_attempts, dismissed, wait,
+                attempt,
+                max_attempts,
+                dismissed,
+                wait,
             )
             # Signal BEFORE sleeping — the backoff is the longest silence in
             # the system and the most likely thing to trip a client timeout.

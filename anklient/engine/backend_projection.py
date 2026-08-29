@@ -18,6 +18,7 @@ The JS is executed via ``driver._js_with_data_strict(CONVERSATION_PROJECTION_JS,
 The ``__D.conv_id`` and ``__D.token`` data slots are threaded by the caller
 (``BackendClient._fetch_recent_conversation_projection``).
 """
+
 from __future__ import annotations
 
 import os
