@@ -1,8 +1,8 @@
 import pathlib
 
-from anklient.drivers.recovery import recover_connection
 from anklient.clipboard.macos import copy_to_clipboard, paste_from_clipboard
 from anklient.config.settings import settings
+from anklient.drivers.recovery import recover_connection
 from anklient.prompts.templates import extract_variables, render_template
 from anklient.ui.terminal import console
 
@@ -378,8 +378,8 @@ def cmd_vision(context, *args):
         console.print("[error]Usage: /vision <image_path> [prompt][/error]")
         return
 
-    import os
     import base64
+    import os
 
     filepath = args[0].strip("'\"")
     filepath = os.path.expanduser(filepath)
@@ -455,12 +455,12 @@ def cmd_generate(context, *args):
         return
         
     prompt = " ".join(args)
-    console.print(f"\n[dim]Booting Visual Engine for Image Generation...[/dim]")
+    console.print("\n[dim]Booting Visual Engine for Image Generation...[/dim]")
     
-    from anklient.drivers.connection import BrowserConnection
-    from anklient.drivers.playwright_driver import ChatGPTPage
     from anklient.chat.client import ChatGPTClient
     from anklient.config.settings import settings
+    from anklient.drivers.connection import BrowserConnection
+    from anklient.drivers.playwright_driver import ChatGPTPage
     from anklient.ui.terminal import TextStreamingLivePanel, print_response
     
     def print_status(msg: str):
@@ -486,9 +486,10 @@ def cmd_generate(context, *args):
             # Save to history
             history_repo = context.get('history_repo')
             if history_repo:
-                from anklient.history.models import HistoryItem
-                from datetime import datetime
                 import datetime as dt
+                from datetime import datetime
+
+                from anklient.history.models import HistoryItem
                 history_repo.save(HistoryItem(
                     id=None, timestamp=datetime.now(dt.timezone.utc), prompt=prompt, response=response.content,
                     category="image", ttft_ms=response.timing.ttft_ms, total_ms=response.timing.total_ms,

@@ -2,8 +2,8 @@ import pathlib
 import time
 from collections.abc import Callable
 
-from anklient.drivers.playwright_driver import ChatGPTPage
 from anklient.chat.message import ChatResponse, TimingMetrics
+from anklient.drivers.playwright_driver import ChatGPTPage
 
 
 class ChatGPTClient:

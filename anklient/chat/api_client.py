@@ -14,8 +14,8 @@ class APIClient:
 
 
     def get_memories(self) -> list[dict]:
-        import urllib.request
         import json
+        import urllib.request
         req = urllib.request.Request(f"{self.client.base_url}/memories", headers={"Authorization": f"Bearer {self.client.api_key}"})
         try:
             with urllib.request.urlopen(req) as response:
@@ -25,8 +25,8 @@ class APIClient:
             raise RuntimeError(f"Failed to fetch memories: {e}")
 
     def get_projects(self) -> list[dict]:
-        import urllib.request
         import json
+        import urllib.request
         req = urllib.request.Request(f"{self.client.base_url}/projects", headers={"Authorization": f"Bearer {self.client.api_key}"})
         try:
             with urllib.request.urlopen(req) as response:
@@ -37,8 +37,8 @@ class APIClient:
 
     def get_usage(self) -> dict:
         """Fetch account usage limits from the daemon."""
-        import urllib.request
         import json
+        import urllib.request
         req = urllib.request.Request(
             f"{self.client.base_url}/chatgpt/usage",
             headers={"Authorization": f"Bearer {self.client.api_key}"},
@@ -51,8 +51,8 @@ class APIClient:
 
     def send_vision(self, b64_image: str, prompt: str, mime_type: str = "image/png") -> str:
         """Upload an image and ask ChatGPT about it."""
-        import urllib.request
         import json
+        import urllib.request
         body = json.dumps({"image": b64_image, "prompt": prompt, "mime_type": mime_type}).encode()
         req = urllib.request.Request(
             f"{self.client.base_url}/chatgpt/vision",
@@ -72,8 +72,8 @@ class APIClient:
 
     def deep_research(self, prompt: str, model: str = "o4-mini-deep-research") -> str:
         """Run a Deep Research query and return the report."""
-        import urllib.request
         import json
+        import urllib.request
         body = json.dumps({"prompt": prompt, "model": model}).encode()
         req = urllib.request.Request(
             f"{self.client.base_url}/chatgpt/research",
@@ -93,8 +93,8 @@ class APIClient:
 
     def download_file(self, file_id: str) -> str | None:
         """Get a temporary download URL for a ChatGPT file."""
-        import urllib.request
         import json
+        import urllib.request
         req = urllib.request.Request(
             f"{self.client.base_url}/chatgpt/files/{file_id}/download",
             headers={"Authorization": f"Bearer {self.client.api_key}"},

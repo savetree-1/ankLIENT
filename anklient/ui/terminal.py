@@ -1,9 +1,11 @@
 import time
+
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 
 from anklient.chat.message import ChatResponse
+
 from .panels import create_request_panel, create_response_panel
 from .theme import chatgpt_theme
 

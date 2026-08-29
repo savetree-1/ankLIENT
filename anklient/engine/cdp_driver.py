@@ -531,7 +531,6 @@ class CDPDriver:
             aspect_ratio: 'auto', 'square', 'wide', or 'tall'
         """
         import uuid
-        import time
 
         headers = await self._get_sentinel_headers()
         
@@ -2296,7 +2295,8 @@ class CDPDriver:
                         if getattr(result, "assets", None):
                             # We got image assets!
                             for asset in result.assets:
-                                import re, json
+                                import json
+                                import re
                                 match = re.search(r'file-service://(file-[a-zA-Z0-9\-]+)', asset)
                                 if match:
                                     asset_id = match.group(1)
@@ -2333,7 +2333,6 @@ class CDPDriver:
                         # Now: keep polling (like not_ready) — the text node may
                         # still be propagating. Only after the loop exhausts do we
                         # yield the placeholder.
-                        pass
                     if result.status in ("ambiguous", "degraded_not_fresh", "fetch_failed"):
                         # Keep polling — these may resolve as the backend settles.
                         pass

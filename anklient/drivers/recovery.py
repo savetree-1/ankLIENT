@@ -1,6 +1,6 @@
 
-from anklient.drivers.playwright_driver import ChatGPTPage
 from anklient.drivers.connection import BrowserConnection
+from anklient.drivers.playwright_driver import ChatGPTPage
 
 
 def recover_connection(cdp_url: str = "http://127.0.0.1:9222") -> tuple[BrowserConnection, ChatGPTPage]:

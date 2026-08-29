@@ -4,6 +4,7 @@ import json
 import random
 from datetime import datetime, timezone
 
+
 def generate_proof_token(required: bool, seed: str = "", difficulty: str = "", user_agent: str | None = None) -> str | None:
     if not required:
         return None
