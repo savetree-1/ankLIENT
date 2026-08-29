@@ -1,0 +1,14 @@
+#!/bin/bash
+if [ "$1" == "daemon" ]; then
+    source .venv/bin/activate
+    export PYTHONPATH=./anklient:$PYTHONPATH
+    python3 anklient/daemon/server.py
+elif [ "$1" == "ui" ]; then
+    source .venv/bin/activate
+    export PYTHONPATH=./anklient:$PYTHONPATH
+    python3 anklient/main.py
+else
+    source .venv/bin/activate
+    export PYTHONPATH=./anklient:$PYTHONPATH
+    python3 anklient/main.py "$@"
+fi
