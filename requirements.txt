@@ -2,3 +2,9 @@ playwright
 rich
 prompt_toolkit
 tomli
+aiohttp
+websockets
+portalocker
+pydantic
+mcp
+openai
