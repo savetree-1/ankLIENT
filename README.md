@@ -66,6 +66,10 @@ The key insight: You pay for ChatGPT Plus/Pro. You already have access to these 
   - [Engine Layer](#engine-layer)
   - [Circuit Breakers](#circuit-breakers)
   - [Multi-Tab Mode](#multi-tab-mode)
+- [Cloud Deployment (Proof of Concept)](#cloud-deployment-proof-of-concept)
+  - [Codespaces Testing Methodology](#codespaces-testing-methodology)
+  - [Key Findings & Outcomes](#key-findings--outcomes)
+  - [Next Steps (VPS Migration)](#next-steps-vps-migration)
 - [Integrations](#integrations)
   - [Using with OpenAI SDK](#using-with-openai-sdk)
   - [Using with opencode](#using-with-opencode)
@@ -726,6 +730,35 @@ By default, ankLIENT uses `tab_mode: "owned"`, where each driver session creates
 - Tabs are automatically cleaned up when the daemon shuts down.
 
 Setting `parallel_tabs: true` in the config enables concurrent multi-tab processing for high-throughput use cases.
+
+---
+
+## Cloud Deployment (Proof of Concept)
+
+ankLIENT was initially developed as a localized macOS background daemon. However, extensive live testing on GitHub Codespaces has successfully proven that **ankLIENT is 100% cloud-ready and can run natively in a headless Linux server environment** without requiring a physical machine or graphical display.
+
+### Codespaces Testing Methodology
+
+To validate the cloud viability without incurring infrastructure costs, a sandboxed Proof-of-Concept (POC) was executed using GitHub Codespaces. The setup included:
+- **Environment:** Debian 12 (Bookworm) Linux Container with Python 3.11.
+- **Dependencies:** Core OS libraries (e.g., `libnss3`, `libasound2`) installed via a custom `.devcontainer`.
+- **Browser:** A fully headless Chromium browser managed by Playwright binaries (which guarantees compatibility in Dockerized/isolated environments).
+- **Session Injection:** The `__Secure-next-auth.session-token` cookie from an existing authenticated macOS browser session was directly injected into the headless Chromium profile using a CDP script, entirely bypassing the need for a VNC or GUI-based login.
+
+### Key Findings & Outcomes
+
+The test yielded four major successes, paving the way for a permanent VPS deployment:
+
+1. **Mac-Free Execution:** The daemon successfully ran on an isolated Linux server without any reliance on macOS-specific tools or background services.
+2. **Headless Bot Evasion:** OpenAI's Cloudflare and bot-detection systems were successfully bypassed by configuring the headless Chromium instance with specific launch flags (such as `--disable-blink-features=AutomationControlled`) and a spoofed standard User-Agent, preventing the `HeadlessChrome` detection.
+3. **Session Persistence:** It was verified that the ChatGPT session cookie remains valid and securely authorizes direct `backend-api` HTTP requests, effectively eliminating the need for periodic manual logins on the server (the cookie is naturally valid for ~30-90 days).
+4. **Global API Accessibility:** The local API (`localhost:8080`) was successfully exposed via Codespaces port forwarding, allowing real-world external HTTP clients (e.g., mobile phones, other servers) to successfully query the OpenAI-compatible REST API remotely.
+
+### Next Steps (VPS Migration)
+
+Since GitHub Codespaces enforce a strict 30-minute idle timeout and monthly compute limits, the environment is strictly for development and testing. 
+
+With the Linux deployment architecture now verified, the next milestone is to migrate the identical containerized setup to an **Always Free Oracle Cloud ARM VM** (or a low-cost Hetzner Linux VPS). This will provide a true 24/7/365, permanently active OpenAI-compatible backend proxy powered entirely by your ChatGPT Plus subscription.
 
 ---
 
