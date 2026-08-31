@@ -1,6 +1,6 @@
 {
     "name": "ankLIENT Cloud",
-    "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+    "image": "mcr.microsoft.com/devcontainers/python:3.11-bookworm",
 
     "postCreateCommand": "bash .devcontainer/setup.sh",
 
