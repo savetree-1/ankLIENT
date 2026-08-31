@@ -1,0 +1,38 @@
+{
+    "name": "ankLIENT Cloud",
+    "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+
+    "postCreateCommand": "bash .devcontainer/setup.sh",
+
+    "forwardPorts": [8080, 9222, 6080],
+    "portsAttributes": {
+        "8080": {
+            "label": "ankLIENT API",
+            "onAutoForward": "notify",
+            "visibility": "public"
+        },
+        "9222": {
+            "label": "Chrome CDP",
+            "onAutoForward": "silent",
+            "visibility": "private"
+        },
+        "6080": {
+            "label": "Browser Login (noVNC)",
+            "onAutoForward": "notify",
+            "visibility": "private"
+        }
+    },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance"
+            ]
+        }
+    },
+
+    "remoteEnv": {
+        "ANKLIENT_CLOUD": "1"
+    }
+}
