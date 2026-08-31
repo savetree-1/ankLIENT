@@ -53,7 +53,7 @@ x11vnc \
     -display :$DISPLAY_NUM \
     -nopw \
     -listen localhost \
-    -port $VNC_PORT \
+    -rfbport $VNC_PORT \
     -forever \
     -quiet &
 VNC_PID=$!
