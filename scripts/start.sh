@@ -70,5 +70,5 @@ fi
 
 python -m anklient.engine \
     --cdp-port $CDP_PORT \
-    --api-port $API_PORT
+    --port $API_PORT
 
