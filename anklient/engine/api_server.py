@@ -96,165 +96,229 @@ class APIServer:
         self.app.router.add_get("/chat", self._handle_ui)
 
     async def _handle_ui(self, request: web.Request) -> web.Response:
-        html = """
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>ankLIENT Cloud</title>
-            <!-- Markdown Parser -->
-            <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-            <style>
-                :root { --bg: #f3f4f6; --chat-bg: #ffffff; --user-msg: #2563eb; --ai-msg: #f3f4f6; --text: #1f2937; }
-                body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
-                header { background: white; padding: 15px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; font-weight: bold; font-size: 1.2rem; }
-                #chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box; }
-                .message { max-width: 85%; padding: 12px 18px; border-radius: 12px; line-height: 1.5; word-wrap: break-word; }
-                .message p { margin: 0 0 10px 0; }
-                .message p:last-child { margin: 0; }
-                .message pre { background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 0.9em; }
-                .message code { font-family: monospace; background: rgba(0,0,0,0.1); padding: 2px 4px; border-radius: 4px; }
-                .message pre code { background: none; padding: 0; }
-                .user-message { background-color: var(--user-msg); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-                .user-message code { background: rgba(255,255,255,0.2); }
-                .ai-message { background-color: var(--chat-bg); align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; }
-                .input-container { background: white; padding: 15px 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box; }
-                input[type="text"] { flex: 1; padding: 12px 20px; border: 1px solid #d1d5db; border-radius: 99px; font-size: 16px; outline: none; transition: border-color 0.2s; }
-                input[type="text"]:focus { border-color: var(--user-msg); }
-                button { background: var(--user-msg); color: white; border: none; padding: 0 24px; border-radius: 99px; font-weight: 600; font-size: 16px; cursor: pointer; transition: opacity 0.2s; }
-                button:disabled { opacity: 0.5; cursor: not-allowed; }
-                button:hover:not(:disabled) { opacity: 0.9; }
-                .typing-indicator { display: inline-flex; gap: 4px; align-items: center; height: 24px; }
-                .typing-indicator span { width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; }
-                .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-                .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-                @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-            </style>
-        </head>
-        <body>
-            <header>ankLIENT ✨ Cloud</header>
-            <div id="chat-container">
-                <div class="message ai-message">
-                    <p>Hello! I am connected to your ChatGPT backend. I support <strong>streaming</strong> and <strong>Markdown</strong> formatting now!</p>
-                </div>
-            </div>
-            <div class="input-container">
-                <input type="text" id="prompt" placeholder="Message ChatGPT..." autocomplete="off">
-                <button id="sendBtn">Send</button>
-            </div>
+        html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ankLIENT</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #212121; color: #ececec; height: 100dvh; display: flex; flex-direction: column; }
 
-            <script>
-                const chatContainer = document.getElementById('chat-container');
-                const promptInput = document.getElementById('prompt');
-                const sendBtn = document.getElementById('sendBtn');
-                
-                // Configure marked.js for safe rendering
-                marked.setOptions({ breaks: true });
+        header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #2f2f2f; border-bottom: 1px solid #3f3f3f; }
+        .logo { font-weight: 700; font-size: 1rem; letter-spacing: .5px; }
+        .logo span { color: #19c37d; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #19c37d; box-shadow: 0 0 6px #19c37d; }
 
-                promptInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') sendMessage();
-                });
-                sendBtn.addEventListener('click', sendMessage);
+        #chat { flex: 1; overflow-y: auto; padding: 28px 16px; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth; }
+        #chat::-webkit-scrollbar { width: 6px; } #chat::-webkit-scrollbar-track { background: transparent; } #chat::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
 
-                async function sendMessage() {
-                    const text = promptInput.value.trim();
-                    if (!text) return;
+        .row { display: flex; gap: 12px; align-items: flex-start; max-width: 780px; width: 100%; margin: 0 auto; }
+        .row.user { flex-direction: row-reverse; }
 
-                    // Add user message
-                    addMessage(text, 'user');
-                    promptInput.value = '';
-                    sendBtn.disabled = true;
-                    promptInput.disabled = true;
+        .avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+        .avatar.ai { background: #19c37d; color: #000; }
+        .avatar.user { background: #555; color: #fff; }
 
-                    // Add empty AI message container for streaming
-                    const aiMessageDiv = document.createElement('div');
-                    aiMessageDiv.className = 'message ai-message';
-                    
-                    const typingIndicator = document.createElement('div');
-                    typingIndicator.className = 'typing-indicator';
-                    typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-                    aiMessageDiv.appendChild(typingIndicator);
-                    
-                    chatContainer.appendChild(aiMessageDiv);
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
+        .bubble { padding: 12px 16px; border-radius: 16px; line-height: 1.65; max-width: calc(100% - 50px); word-break: break-word; }
+        .row.user .bubble { background: #2f2f2f; border: 1px solid #3f3f3f; border-bottom-right-radius: 4px; }
+        .row.ai .bubble { background: transparent; padding-left: 0; }
 
-                    let fullContent = "";
+        .bubble p { margin: 0 0 10px; } .bubble p:last-child { margin: 0; }
+        .bubble h1,.bubble h2,.bubble h3 { margin: 14px 0 6px; color: #fff; }
+        .bubble ul,.bubble ol { padding-left: 22px; margin: 8px 0; }
+        .bubble li { margin: 4px 0; }
+        .bubble code { background: #3a3a3a; padding: 2px 6px; border-radius: 4px; font-size: 0.88em; font-family: "Fira Code", monospace; }
+        .bubble pre { background: #1a1a1a; border: 1px solid #3f3f3f; border-radius: 10px; padding: 14px; overflow-x: auto; margin: 10px 0; }
+        .bubble pre code { background: none; padding: 0; font-size: 0.87em; }
+        .bubble strong { color: #fff; }
+        .bubble a { color: #19c37d; }
+        .bubble blockquote { border-left: 3px solid #19c37d; padding-left: 12px; color: #aaa; margin: 8px 0; }
+
+        .typing { display: inline-flex; gap: 5px; padding: 12px 0; }
+        .typing span { width: 7px; height: 7px; background: #888; border-radius: 50%; animation: blink 1.4s infinite both; }
+        .typing span:nth-child(2) { animation-delay: .2s; } .typing span:nth-child(3) { animation-delay: .4s; }
+        @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+
+        .welcome { margin: auto; text-align: center; padding: 40px 20px; }
+        .welcome h2 { font-size: 1.8rem; color: #fff; margin-bottom: 10px; }
+        .welcome p { color: #888; font-size: 1rem; }
+
+        .input-wrap { padding: 12px 16px 20px; background: #212121; }
+        .input-box { max-width: 780px; margin: 0 auto; background: #2f2f2f; border: 1px solid #4f4f4f; border-radius: 16px; display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px; transition: border-color .2s; }
+        .input-box:focus-within { border-color: #19c37d; }
+        textarea { flex: 1; background: none; border: none; outline: none; color: #ececec; font-size: 15px; resize: none; max-height: 180px; line-height: 1.5; font-family: inherit; }
+        textarea::placeholder { color: #666; }
+        .send-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: #19c37d; color: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .2s; font-size: 16px; }
+        .send-btn:disabled { opacity: .4; cursor: default; }
+        .send-btn:hover:not(:disabled) { opacity: .85; }
+        .hint { max-width: 780px; margin: 6px auto 0; text-align: center; font-size: 11px; color: #555; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">ank<span>LIENT</span></div>
+        <div class="status-dot" id="dot"></div>
+    </header>
+
+    <div id="chat">
+        <div class="welcome" id="welcome">
+            <h2>What can I help with?</h2>
+            <p>Powered by ankLIENT — your personal ChatGPT API running in the cloud.</p>
+        </div>
+    </div>
+
+    <div class="input-wrap">
+        <div class="input-box">
+            <textarea id="prompt" rows="1" placeholder="Message ChatGPT..." autocomplete="off"></textarea>
+            <button class="send-btn" id="sendBtn" title="Send">&#9650;</button>
+        </div>
+        <p class="hint">ankLIENT may produce inaccurate information. Verify important facts.</p>
+    </div>
+
+<script>
+    marked.setOptions({ breaks: true, gfm: true });
+
+    const chat = document.getElementById('chat');
+    const promptEl = document.getElementById('prompt');
+    const sendBtn = document.getElementById('sendBtn');
+    const welcomeEl = document.getElementById('welcome');
+    const dot = document.getElementById('dot');
+
+    // Conversation history for multi-turn
+    let messages = [];
+    let isSending = false;
+
+    promptEl.addEventListener('input', () => {
+        promptEl.style.height = 'auto';
+        promptEl.style.height = Math.min(promptEl.scrollHeight, 180) + 'px';
+    });
+    promptEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+    sendBtn.addEventListener('click', send);
+
+    async function send() {
+        if (isSending) return;
+        const text = promptEl.value.trim();
+        if (!text) return;
+
+        // Remove welcome screen
+        if (welcomeEl) welcomeEl.remove();
+
+        isSending = true;
+        sendBtn.disabled = true;
+        promptEl.value = '';
+        promptEl.style.height = 'auto';
+
+        // Add user message to history & UI
+        messages.push({ role: 'user', content: text });
+        addBubble(text, 'user');
+
+        // AI typing placeholder
+        const aiRow = document.createElement('div');
+        aiRow.className = 'row ai';
+        aiRow.innerHTML = '<div class="avatar ai">A</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
+        chat.appendChild(aiRow);
+        chat.scrollTop = chat.scrollHeight;
+
+        const bubbleEl = aiRow.querySelector('.bubble');
+        let fullContent = '';
+        let streamStarted = false;
+
+        try {
+            const resp = await fetch('/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: 'auto', messages: messages, stream: true })
+            });
+
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let done = false;
+
+            while (!done) {
+                const { value, done: streamDone } = await reader.read();
+                done = streamDone;
+                if (value) buffer += decoder.decode(value, { stream: true });
+
+                // Process all complete SSE lines from buffer
+                let newlineIdx;
+                while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
+                    const line = buffer.slice(0, newlineIdx).trimEnd();
+                    buffer = buffer.slice(newlineIdx + 1);
+
+                    if (!line.startsWith('data: ')) continue;
+                    const payload = line.slice(6).trim();
+                    if (payload === '[DONE]') { done = true; break; }
 
                     try {
-                        const response = await fetch('/v1/chat/completions', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                model: "auto",
-                                messages: [{ role: "user", content: text }],
-                                stream: true
-                            })
-                        });
-
-                        if (!response.ok) throw new Error('API Error');
-
-                        // Remove typing indicator once stream starts
-                        aiMessageDiv.innerHTML = '';
-
-                        const reader = response.body.getReader();
-                        const decoder = new TextDecoder("utf-8");
-
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) break;
-                            
-                            const chunk = decoder.decode(value, { stream: true });
-                            const lines = chunk.split('\n');
-                            
-                            for (const line of lines) {
-                                if (line.startsWith('data: ')) {
-                                    const dataStr = line.slice(6).trim();
-                                    if (dataStr === '[DONE]') break;
-                                    
-                                    try {
-                                        const data = JSON.parse(dataStr);
-                                        const delta = data.choices[0].delta;
-                                        
-                                        if (delta && delta.content) {
-                                            fullContent += delta.content;
-                                            // Parse markdown in real-time
-                                            aiMessageDiv.innerHTML = marked.parse(fullContent);
-                                            chatContainer.scrollTop = chatContainer.scrollHeight;
-                                        }
-                                    } catch (e) {
-                                        // Handle incomplete JSON chunks or parse errors silently
-                                    }
-                                }
+                        const parsed = JSON.parse(payload);
+                        const delta = parsed?.choices?.[0]?.delta?.content;
+                        if (delta) {
+                            if (!streamStarted) {
+                                bubbleEl.innerHTML = '';
+                                streamStarted = true;
                             }
+                            fullContent += delta;
+                            bubbleEl.innerHTML = marked.parse(fullContent);
+                            chat.scrollTop = chat.scrollHeight;
                         }
-                    } catch (error) {
-                        aiMessageDiv.innerHTML = '<p style="color: red;">Error connecting to API.</p>';
-                    } finally {
-                        sendBtn.disabled = false;
-                        promptInput.disabled = false;
-                        promptInput.focus();
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                    }
+                    } catch (_) {}
                 }
+            }
 
-                function addMessage(text, sender) {
-                    const div = document.createElement('div');
-                    div.className = `message ${sender}-message`;
-                    if (sender === 'user') {
-                        div.textContent = text; // Prevent XSS for user input
-                    } else {
-                        div.innerHTML = marked.parse(text);
-                    }
-                    chatContainer.appendChild(div);
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
+            if (!streamStarted && fullContent === '') {
+                // Non-streaming fallback - try to parse as JSON
+                try {
+                    const j = JSON.parse(buffer);
+                    fullContent = j?.choices?.[0]?.message?.content || 'No response.';
+                    bubbleEl.innerHTML = marked.parse(fullContent);
+                } catch (_) {
+                    bubbleEl.innerHTML = '<em style="color:#888">Empty response from backend.</em>';
                 }
-            </script>
-        </body>
-        </html>
-        """
+            }
+
+            // Add assistant response to history
+            messages.push({ role: 'assistant', content: fullContent });
+
+        } catch (err) {
+            bubbleEl.innerHTML = '<span style="color:#ff6b6b">Error: ' + err.message + '. Is the API server running?</span>';
+        } finally {
+            isSending = false;
+            sendBtn.disabled = false;
+            promptEl.focus();
+            chat.scrollTop = chat.scrollHeight;
+        }
+    }
+
+    function addBubble(text, role) {
+        const row = document.createElement('div');
+        row.className = 'row ' + role;
+        const avatarLabel = role === 'user' ? 'U' : 'A';
+        const textContent = role === 'user'
+            ? `<div class="bubble"><p>${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>`
+            : `<div class="bubble">${marked.parse(text)}</div>`;
+        row.innerHTML = `<div class="avatar ${role}">${avatarLabel}</div>${textContent}`;
+        chat.appendChild(row);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Ping health on load
+    fetch('/health').then(r => r.json()).then(d => {
+        dot.style.background = d.status === 'healthy' ? '#19c37d' : '#f59e0b';
+        dot.style.boxShadow = '0 0 6px ' + (d.status === 'healthy' ? '#19c37d' : '#f59e0b');
+    }).catch(() => { dot.style.background = '#ef4444'; dot.style.boxShadow = '0 0 6px #ef4444'; });
+</script>
+</body>
+</html>"""
         return web.Response(text=html, content_type="text/html")
-    # ── Auth ──────────────────────────────────────────────────
+        # ── Auth ──────────────────────────────────────────────────
 
     def _check_auth(self, request: web.Request) -> web.Response | None:
         """Check API key if configured. Returns error response or None."""
