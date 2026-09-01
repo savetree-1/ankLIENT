@@ -2299,7 +2299,7 @@ class CDPDriver:
             captured_uuid = None
             if capture_scope is not None:
                 captured_uuid = await self._identity_listener.wait_for_captured_uuid(
-                    timeout=5.0
+                    timeout=10.0
                 )
 
             # P0 send acknowledgment (ChatGPT review, conv 6a52f0f3):

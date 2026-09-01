@@ -466,6 +466,16 @@ class ChatGPTDom:
                 break
             await asyncio.sleep(0.3)
 
+        # Give ChatGPT's React compositor a moment to fully settle after the
+        # stop button disappears.  The stop button vanishing means generation
+        # is done, but React may still be flushing its internal state — the
+        # send button can appear and be "enabled" while the onClick handler
+        # isn't yet wired up.  Without this pause the click dispatches
+        # successfully (no error from click_send) but React silently drops it,
+        # causing identity_capture_missed and a SendReadinessError.  1.5s
+        # comfortably covers observed ChatGPT composer-reset latencies.
+        await asyncio.sleep(1.5)
+
         while time.monotonic() < deadline:
             has_btn = await d._js(
                 "(function() {"
