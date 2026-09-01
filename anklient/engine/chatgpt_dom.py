@@ -447,6 +447,25 @@ class ChatGPTDom:
         # composer-reset window after a prior send — see
         # SEND_BUTTON_POLL_MAX_WAIT_S for rationale.
         deadline = time.monotonic() + SEND_BUTTON_POLL_MAX_WAIT_S
+
+        # First, wait for the stop button to fully disappear.  The fallback
+        # completion detector can fire while the stop button is still visible
+        # (the DOM settled but the UI hasn't re-rendered the send affordance
+        # yet).  Proceeding before the stop button clears always yields
+        # "no send button" because the composer is still in generating mode.
+        stop_deadline = time.monotonic() + 15.0
+        while time.monotonic() < stop_deadline:
+            stop_visible = await d._js(
+                "(function(){"
+                "  var s = document.querySelector('[data-testid=\"stop-button\"]')"
+                "         || document.querySelector('button[aria-label*=\"Stop\" i]');"
+                "  return s ? 'yes' : 'no';"
+                "})()"
+            )
+            if stop_visible == "no":
+                break
+            await asyncio.sleep(0.3)
+
         while time.monotonic() < deadline:
             has_btn = await d._js(
                 "(function() {"
