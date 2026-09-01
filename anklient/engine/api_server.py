@@ -103,71 +103,153 @@ class APIServer:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ankLIENT</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #212121 url('/assets/chat_bg.png') center/cover no-repeat fixed; color: #ececec; height: 100dvh; display: flex; flex-direction: column; }
 
-        header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #2f2f2f; border-bottom: 1px solid #3f3f3f; }
-        .logo { font-weight: 700; font-size: 1rem; letter-spacing: .5px; }
+        body {
+            font-family: "Josefin Sans", system-ui, sans-serif;
+            background: url("/assets/chat_bg.png") center/cover no-repeat fixed;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Full dark overlay so bg is visible but not blinding */
+        body::before {
+            content: "";
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 0;
+        }
+
+        header {
+            position: relative; z-index: 10;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 22px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: 2px; color: #fff; text-transform: uppercase; }
         .logo span { color: #19c37d; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #19c37d; box-shadow: 0 0 6px #19c37d; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #19c37d; box-shadow: 0 0 8px #19c37d; }
 
-        #chat { flex: 1; overflow-y: auto; padding: 28px 16px; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth; }
-        #chat::-webkit-scrollbar { width: 6px; } #chat::-webkit-scrollbar-track { background: transparent; } #chat::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+        #chat {
+            position: relative; z-index: 5;
+            flex: 1; overflow-y: auto;
+            padding: 24px 16px 10px;
+            display: flex; flex-direction: column; gap: 18px;
+            scroll-behavior: smooth;
+        }
+        #chat::-webkit-scrollbar { width: 5px; }
+        #chat::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
 
-        .row { display: flex; gap: 12px; align-items: flex-start; max-width: 780px; width: 100%; margin: 0 auto; }
+        .welcome {
+            margin: auto; text-align: center; padding: 30px 20px;
+        }
+        .welcome h2 {
+            font-size: 2rem; font-weight: 700; letter-spacing: 3px;
+            color: #fff; text-transform: uppercase; margin-bottom: 10px;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.8);
+        }
+        .welcome p { color: rgba(255,255,255,0.6); font-size: 0.9rem; letter-spacing: 1px; }
+
+        .row { display: flex; gap: 10px; align-items: flex-end; max-width: 760px; width: 100%; margin: 0 auto; }
         .row.user { flex-direction: row-reverse; }
 
-        .avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+        .avatar {
+            width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700; letter-spacing: 1px;
+        }
         .avatar.ai { background: #19c37d; color: #000; }
-        .avatar.user { background: #555; color: #fff; }
+        .avatar.user { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
 
-        .bubble { padding: 12px 16px; border-radius: 16px; line-height: 1.65; max-width: calc(100% - 50px); word-break: break-word; }
-        .row.user .bubble { background: #2f2f2f; border: 1px solid #3f3f3f; border-bottom-right-radius: 4px; }
-        .row.ai .bubble { background: transparent; padding-left: 0; }
+        .bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.6;
+            max-width: calc(100% - 46px);
+            word-break: break-word;
+            font-size: 0.95rem;
+        }
+        .row.user .bubble {
+            background: rgba(25, 195, 125, 0.2);
+            border: 1px solid rgba(25, 195, 125, 0.4);
+            border-bottom-right-radius: 4px;
+            color: #fff;
+            backdrop-filter: blur(10px);
+        }
+        .row.ai .bubble {
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-bottom-left-radius: 4px;
+            color: #ececec;
+            backdrop-filter: blur(10px);
+        }
 
         .bubble p { margin: 0 0 10px; } .bubble p:last-child { margin: 0; }
-        .bubble h1,.bubble h2,.bubble h3 { margin: 14px 0 6px; color: #fff; }
-        .bubble ul,.bubble ol { padding-left: 22px; margin: 8px 0; }
-        .bubble li { margin: 4px 0; }
-        .bubble code { background: #3a3a3a; padding: 2px 6px; border-radius: 4px; font-size: 0.88em; font-family: "Fira Code", monospace; }
-        .bubble pre { background: #1a1a1a; border: 1px solid #3f3f3f; border-radius: 10px; padding: 14px; overflow-x: auto; margin: 10px 0; }
-        .bubble pre code { background: none; padding: 0; font-size: 0.87em; }
+        .bubble h1,.bubble h2,.bubble h3 { margin: 12px 0 6px; color: #fff; font-family: "Josefin Sans", sans-serif; }
+        .bubble ul,.bubble ol { padding-left: 20px; margin: 6px 0; }
+        .bubble li { margin: 3px 0; }
+        .bubble code { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.85em; font-family: monospace; }
+        .bubble pre { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; overflow-x: auto; margin: 8px 0; }
+        .bubble pre code { background: none; padding: 0; }
         .bubble strong { color: #fff; }
         .bubble a { color: #19c37d; }
-        .bubble blockquote { border-left: 3px solid #19c37d; padding-left: 12px; color: #aaa; margin: 8px 0; }
 
-        .typing { display: inline-flex; gap: 5px; padding: 12px 0; }
-        .typing span { width: 7px; height: 7px; background: #888; border-radius: 50%; animation: blink 1.4s infinite both; }
+        .typing { display: inline-flex; gap: 5px; padding: 4px 0; }
+        .typing span { width: 6px; height: 6px; background: rgba(255,255,255,0.5); border-radius: 50%; animation: blink 1.3s infinite both; }
         .typing span:nth-child(2) { animation-delay: .2s; } .typing span:nth-child(3) { animation-delay: .4s; }
-        @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+        @keyframes blink { 0%,80%,100%{opacity:.15} 40%{opacity:1} }
 
-        .welcome { margin: auto; text-align: center; padding: 40px 20px; }
-        .welcome h2 { font-size: 1.8rem; color: #fff; margin-bottom: 10px; }
-        .welcome p { color: #888; font-size: 1rem; }
-
-        .input-wrap { padding: 12px 16px 20px; background: #212121; }
-        .input-box { max-width: 780px; margin: 0 auto; background: #2f2f2f; border: 1px solid #4f4f4f; border-radius: 16px; display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px; transition: border-color .2s; }
-        .input-box:focus-within { border-color: #19c37d; }
-        textarea { flex: 1; background: none; border: none; outline: none; color: #ececec; font-size: 15px; resize: none; max-height: 180px; line-height: 1.5; font-family: inherit; }
-        textarea::placeholder { color: #666; }
-        .send-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: #19c37d; color: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .2s; font-size: 16px; }
-        .send-btn:disabled { opacity: .4; cursor: default; }
-        .send-btn:hover:not(:disabled) { opacity: .85; }
-        .hint { max-width: 780px; margin: 6px auto 0; text-align: center; font-size: 11px; color: #555; }
+        .input-wrap {
+            position: relative; z-index: 10;
+            padding: 12px 16px 18px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .input-box {
+            max-width: 760px; margin: 0 auto;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 18px;
+            display: flex; align-items: flex-end; gap: 10px; padding: 10px 14px;
+            transition: border-color .2s;
+        }
+        .input-box:focus-within { border-color: rgba(25,195,125,0.7); }
+        textarea {
+            flex: 1; background: none; border: none; outline: none;
+            color: #fff; font-size: 15px; resize: none; max-height: 160px;
+            line-height: 1.5; font-family: "Josefin Sans", sans-serif;
+        }
+        textarea::placeholder { color: rgba(255,255,255,0.35); }
+        .send-btn {
+            width: 36px; height: 36px; border-radius: 50%; border: none;
+            background: #19c37d; color: #000; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 15px; font-weight: 700;
+            transition: opacity .2s, transform .15s;
+        }
+        .send-btn:disabled { opacity: 0.35; cursor: default; }
+        .send-btn:hover:not(:disabled) { opacity: 0.85; transform: scale(1.06); }
+        .hint { max-width: 760px; margin: 7px auto 0; text-align: center; font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
     <header>
         <div class="logo">ank<span>LIENT</span></div>
-        <div class="status-dot" id="dot"></div>
+        <div class="dot" id="dot"></div>
     </header>
 
     <div id="chat">
         <div class="welcome" id="welcome">
             <h2>What can I help with?</h2>
-            <p>Powered by ankLIENT — your personal ChatGPT API running in the cloud.</p>
+            <p>Your personal ChatGPT cloud API &mdash; powered by ankLIENT</p>
         </div>
     </div>
 
@@ -176,27 +258,43 @@ class APIServer:
             <textarea id="prompt" rows="1" placeholder="Message ChatGPT..." autocomplete="off"></textarea>
             <button class="send-btn" id="sendBtn" title="Send">&#9650;</button>
         </div>
-        <p class="hint">ankLIENT may produce inaccurate information. Verify important facts.</p>
+        <p class="hint">ankLIENT may produce inaccurate information &mdash; verify important facts</p>
     </div>
 
 <script>
-    marked.setOptions({ breaks: true, gfm: true });
+    // Minimal safe markdown parser (no CDN dependency)
+    function parseMarkdown(text) {
+        return text
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            // code blocks
+            .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+            // inline code
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            // bold
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            // italic
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            // headers
+            .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+            // unordered list
+            .replace(/^\s*[-*] (.+)$/gm, '<li>$1</li>')
+            .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+            .replace(/\n/g, '<br>');
+    }
 
-    const chat = document.getElementById('chat');
+    const chatEl = document.getElementById('chat');
     const promptEl = document.getElementById('prompt');
     const sendBtn = document.getElementById('sendBtn');
-    const welcomeEl = document.getElementById('welcome');
-    const dot = document.getElementById('dot');
-
-    // Conversation history for multi-turn
     let messages = [];
     let isSending = false;
 
     promptEl.addEventListener('input', () => {
         promptEl.style.height = 'auto';
-        promptEl.style.height = Math.min(promptEl.scrollHeight, 180) + 'px';
+        promptEl.style.height = Math.min(promptEl.scrollHeight, 160) + 'px';
     });
-    promptEl.addEventListener('keydown', (e) => {
+    promptEl.addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
     });
     sendBtn.addEventListener('click', send);
@@ -206,28 +304,23 @@ class APIServer:
         const text = promptEl.value.trim();
         if (!text) return;
 
-        // Remove welcome screen
-        if (welcomeEl) welcomeEl.remove();
+        document.getElementById('welcome')?.remove();
 
         isSending = true;
         sendBtn.disabled = true;
         promptEl.value = '';
         promptEl.style.height = 'auto';
 
-        // Add user message to history & UI
         messages.push({ role: 'user', content: text });
         addBubble(text, 'user');
 
-        // AI typing placeholder
-        const aiRow = document.createElement('div');
-        aiRow.className = 'row ai';
-        aiRow.innerHTML = '<div class="avatar ai">A</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
-        chat.appendChild(aiRow);
-        chat.scrollTop = chat.scrollHeight;
-
+        const aiRow = createRow('ai');
         const bubbleEl = aiRow.querySelector('.bubble');
+        bubbleEl.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+        chatEl.appendChild(aiRow);
+        scroll();
+
         let fullContent = '';
-        let streamStarted = false;
 
         try {
             const resp = await fetch('/v1/chat/completions', {
@@ -235,86 +328,81 @@ class APIServer:
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ model: 'auto', messages: messages, stream: true })
             });
-
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
             const reader = resp.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
             let done = false;
+            let streamStarted = false;
 
             while (!done) {
-                const { value, done: streamDone } = await reader.read();
-                done = streamDone;
+                const { value, done: d } = await reader.read();
+                done = d;
                 if (value) buffer += decoder.decode(value, { stream: true });
 
-                // Process all complete SSE lines from buffer
-                let newlineIdx;
-                while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
-                    const line = buffer.slice(0, newlineIdx).trimEnd();
-                    buffer = buffer.slice(newlineIdx + 1);
-
+                let idx;
+                while ((idx = buffer.indexOf('\n')) !== -1) {
+                    const line = buffer.slice(0, idx).trimEnd();
+                    buffer = buffer.slice(idx + 1);
                     if (!line.startsWith('data: ')) continue;
                     const payload = line.slice(6).trim();
                     if (payload === '[DONE]') { done = true; break; }
-
                     try {
-                        const parsed = JSON.parse(payload);
-                        const delta = parsed?.choices?.[0]?.delta?.content;
+                        const delta = JSON.parse(payload)?.choices?.[0]?.delta?.content;
                         if (delta) {
-                            if (!streamStarted) {
-                                bubbleEl.innerHTML = '';
-                                streamStarted = true;
-                            }
+                            if (!streamStarted) { bubbleEl.innerHTML = ''; streamStarted = true; }
                             fullContent += delta;
-                            bubbleEl.innerHTML = marked.parse(fullContent);
-                            chat.scrollTop = chat.scrollHeight;
+                            bubbleEl.innerHTML = parseMarkdown(fullContent);
+                            scroll();
                         }
-                    } catch (_) {}
+                    } catch(_) {}
                 }
             }
 
-            if (!streamStarted && fullContent === '') {
-                // Non-streaming fallback - try to parse as JSON
-                try {
-                    const j = JSON.parse(buffer);
-                    fullContent = j?.choices?.[0]?.message?.content || 'No response.';
-                    bubbleEl.innerHTML = marked.parse(fullContent);
-                } catch (_) {
-                    bubbleEl.innerHTML = '<em style="color:#888">Empty response from backend.</em>';
-                }
+            if (!fullContent) {
+                bubbleEl.innerHTML = '<em style="opacity:.5">No response received.</em>';
             }
-
-            // Add assistant response to history
             messages.push({ role: 'assistant', content: fullContent });
 
-        } catch (err) {
-            bubbleEl.innerHTML = '<span style="color:#ff6b6b">Error: ' + err.message + '. Is the API server running?</span>';
+        } catch(err) {
+            bubbleEl.innerHTML = '<span style="color:#ff6b6b">\u26a0 ' + err.message + '</span>';
         } finally {
             isSending = false;
             sendBtn.disabled = false;
+            promptEl.disabled = false;
             promptEl.focus();
-            chat.scrollTop = chat.scrollHeight;
+            scroll();
         }
     }
 
-    function addBubble(text, role) {
+    function createRow(role) {
         const row = document.createElement('div');
         row.className = 'row ' + role;
-        const avatarLabel = role === 'user' ? 'U' : 'A';
-        const textContent = role === 'user'
-            ? `<div class="bubble"><p>${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>`
-            : `<div class="bubble">${marked.parse(text)}</div>`;
-        row.innerHTML = `<div class="avatar ${role}">${avatarLabel}</div>${textContent}`;
-        chat.appendChild(row);
-        chat.scrollTop = chat.scrollHeight;
+        const label = role === 'user' ? 'U' : 'A';
+        row.innerHTML = \`<div class="avatar \${role}">\${label}</div><div class="bubble"></div>\`;
+        return row;
     }
+    function addBubble(text, role) {
+        const row = createRow(role);
+        row.querySelector('.bubble').innerHTML = role === 'user'
+            ? text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            : parseMarkdown(text);
+        chatEl.appendChild(row);
+        scroll();
+    }
+    function scroll() { chatEl.scrollTop = chatEl.scrollHeight; }
 
-    // Ping health on load
-    fetch('/health').then(r => r.json()).then(d => {
-        dot.style.background = d.status === 'healthy' ? '#19c37d' : '#f59e0b';
-        dot.style.boxShadow = '0 0 6px ' + (d.status === 'healthy' ? '#19c37d' : '#f59e0b');
-    }).catch(() => { dot.style.background = '#ef4444'; dot.style.boxShadow = '0 0 6px #ef4444'; });
+    fetch('/health').then(r=>r.json()).then(d=>{
+        const dot = document.getElementById('dot');
+        const ok = d.status === 'healthy';
+        dot.style.background = ok ? '#19c37d' : '#f59e0b';
+        dot.style.boxShadow = '0 0 8px ' + (ok ? '#19c37d' : '#f59e0b');
+    }).catch(()=>{
+        const dot = document.getElementById('dot');
+        dot.style.background = '#ef4444';
+        dot.style.boxShadow = '0 0 8px #ef4444';
+    });
 </script>
 </body>
 </html>"""
