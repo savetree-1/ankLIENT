@@ -94,6 +94,7 @@ class APIServer:
         self.app.router.add_get("/health", self._handle_health)
         self.app.router.add_get("/", self._handle_health)
         self.app.router.add_get("/chat", self._handle_ui)
+        self.app.router.add_get("/assets/{filename}", self._handle_static)
 
     async def _handle_ui(self, request: web.Request) -> web.Response:
         html = """<!DOCTYPE html>
@@ -105,7 +106,7 @@ class APIServer:
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #212121; color: #ececec; height: 100dvh; display: flex; flex-direction: column; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #212121 url('/assets/chat_bg.png') center/cover no-repeat fixed; color: #ececec; height: 100dvh; display: flex; flex-direction: column; }
 
         header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #2f2f2f; border-bottom: 1px solid #3f3f3f; }
         .logo { font-weight: 700; font-size: 1rem; letter-spacing: .5px; }
@@ -318,6 +319,20 @@ class APIServer:
 </body>
 </html>"""
         return web.Response(text=html, content_type="text/html")
+
+    async def _handle_static(self, request: web.Request) -> web.Response:
+        """Serve static assets (images etc.) from the assets/ directory."""
+        import pathlib, mimetypes
+        filename = request.match_info.get("filename", "")
+        # Security: no path traversal
+        if ".." in filename or "/" in filename:
+            raise web.HTTPForbidden()
+        assets_dir = pathlib.Path(__file__).parent.parent.parent / "assets"
+        file_path = assets_dir / filename
+        if not file_path.exists():
+            raise web.HTTPNotFound()
+        mime, _ = mimetypes.guess_type(str(file_path))
+        return web.Response(body=file_path.read_bytes(), content_type=mime or "application/octet-stream")
         # ── Auth ──────────────────────────────────────────────────
 
     def _check_auth(self, request: web.Request) -> web.Response | None:
