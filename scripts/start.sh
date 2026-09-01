@@ -41,6 +41,8 @@ chromium \
     --remote-debugging-port=$CDP_PORT \
     --remote-debugging-address=127.0.0.1 \
     --user-data-dir="$PROFILE_DIR" \
+    --user-agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.7922.173 Safari/537.36" \
+    --disable-blink-features=AutomationControlled \
     --disable-background-timer-throttling \
     --disable-renderer-backgrounding \
     "https://chatgpt.com" > /tmp/chrome.log 2>&1 &
