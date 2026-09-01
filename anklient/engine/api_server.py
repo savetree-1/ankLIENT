@@ -149,7 +149,7 @@ class APIServer:
                         });
                         let data = await res.json();
                         let reply = data.choices[0].message.content;
-                        chat.innerHTML += `<div class="msg ai">${reply.replace(/\n/g, '<br>')}</div>`;
+                        chat.innerHTML += `<div class="msg ai">${reply.replace(/\\n/g, '<br>')}</div>`;
                     } catch(e) {
                         chat.innerHTML += `<div class="msg ai" style="background:#ffdddd;color:red;">Error connecting to API.</div>`;
                     }
