@@ -39,15 +39,7 @@ header{
   text-shadow:0 1px 10px rgba(0,0,0,.9);
 }
 .logo em{color:#19c37d;font-style:normal}
-.pill{
-  display:flex;align-items:center;gap:6px;
-  background:rgba(0,0,0,.35);backdrop-filter:blur(12px);
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:99px;padding:5px 12px;
-  font-size:.7rem;letter-spacing:1px;
-  text-shadow:none;
-}
-.dot{width:7px;height:7px;border-radius:50%;background:#19c37d;box-shadow:0 0 6px #19c37d}
+.dot{width:8px;height:8px;border-radius:50%;background:#19c37d;box-shadow:0 0 6px #19c37d;flex-shrink:0}
 
 /* ── chat scroll area ── */
 #chat{
@@ -68,15 +60,10 @@ header{
 }
 .hero h1{
   font-size:clamp(2.2rem,8vw,4.5rem);
-  font-weight:700;letter-spacing:6px;text-transform:uppercase;
+  font-weight:700;letter-spacing:4px;
   line-height:1.08;
   text-shadow:0 2px 12px rgba(0,0,0,.9),0 0 60px rgba(0,0,0,.5);
-  margin-bottom:12px;
-}
-.hero p{
-  color:rgba(255,255,255,.65);
-  font-size:.88rem;letter-spacing:.5px;font-weight:400;
-  text-shadow:0 1px 8px rgba(0,0,0,.9);
+  margin-bottom:0;
 }
 
 /* ── messages ── */
@@ -172,20 +159,24 @@ textarea::placeholder{color:rgba(255,255,255,.35)}
 
 <header>
   <div class="logo">ank<em>LIENT</em></div>
-  <div class="pill"><div class="dot" id="dot"></div><span id="status">connecting</span></div>
+  <div class="dot" id="dot"></div>
 </header>
 
 <div id="chat">
   <div class="hero" id="hero">
     <h1>What can I<br>help with?</h1>
-    <p>Your personal ChatGPT &mdash; running in the cloud</p>
   </div>
 </div>
 
 <div class="bar">
   <div class="bar-inner">
     <textarea id="inp" rows="1" placeholder="Message ChatGPT..."></textarea>
-    <button id="sendBtn">&#9650;</button>
+    <button id="sendBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
   </div>
 </div>
 
@@ -303,15 +294,12 @@ function md(s){
 }
 
 var dot=document.getElementById('dot');
-var st=document.getElementById('status');
 fetch('/health').then(function(r){return r.json();}).then(function(d){
   var ok=d.status==='healthy';
   dot.style.background=ok?'#19c37d':'#f59e0b';
   dot.style.boxShadow='0 0 6px '+(ok?'#19c37d':'#f59e0b');
-  st.textContent=ok?'online':'degraded';
 }).catch(function(){
   dot.style.background='#ef4444';
-  st.textContent='offline';
 });
 </script>
 </body>
