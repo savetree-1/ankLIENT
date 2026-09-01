@@ -215,7 +215,7 @@ function send(){
   fetch('/v1/chat/completions',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'auto',messages:hist,stream:true})
+    body:JSON.stringify({model:'auto',messages:[{role:'user',content:text}],stream:true})
   }).then(function(r){
     if(!r.ok)throw new Error('HTTP '+r.status);
     var reader=r.body.getReader();
@@ -225,10 +225,10 @@ function send(){
       return reader.read().then(function(chunk){
         if(chunk.done)return;
         buf+=dec.decode(chunk.value,{stream:true});
-        var idx;
-        while((idx=buf.indexOf('\n'))!==-1){
-          var line=buf.slice(0,idx).trimEnd();
-          buf=buf.slice(idx+1);
+        var lines=buf.split('\n');
+        buf=lines.pop(); // keep last incomplete line in buffer
+        for(var i=0;i<lines.length;i++){
+          var line=lines[i].trim();
           if(!line.startsWith('data: '))continue;
           var pay=line.slice(6).trim();
           if(pay==='[DONE]')return;
@@ -252,16 +252,15 @@ function send(){
       return fetch('/v1/chat/completions',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'auto',messages:hist,stream:false})
+        body:JSON.stringify({model:'auto',messages:[{role:'user',content:text}],stream:false})
       }).then(function(r){return r.json();}).then(function(d){
         full=d.choices[0].message.content||'';
         bub.innerHTML=md(full);bot();
       });
     }
   }).catch(function(e){
-    bub.innerHTML='<span style="color:#ff6b6b">'+e.message+'</span>';
+    bub.innerHTML='<span style="color:#ff6b6b">&#9888; '+e.message+'</span>';
   }).finally(function(){
-    if(full)hist.push({role:'assistant',content:full});
     busy=false;btn.disabled=false;inp.focus();bot();
   });
 }
